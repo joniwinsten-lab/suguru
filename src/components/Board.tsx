@@ -77,7 +77,7 @@ function describeCell(
   given: boolean,
 ): string {
   const pos = `Rivi ${row + 1}, sarake ${col + 1}`
-  if (value === null) return `${pos}, tyhjä${given ? '' : ''}`
+  if (value === null) return `${pos}, tyhjä`
   const clue = given ? 'vihje' : 'oma numero'
   return `${pos}, ${clue} ${value}`
 }
