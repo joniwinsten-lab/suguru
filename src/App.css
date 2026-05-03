@@ -74,6 +74,66 @@
   gap: 1rem;
 }
 
+.region-legend {
+  margin: 0;
+  padding: 0.65rem 0.75rem 0.75rem;
+  border: 1px dashed color-mix(in srgb, var(--border) 85%, transparent);
+  border-radius: 10px;
+  background:
+    radial-gradient(
+      circle at 18% 22%,
+      color-mix(in srgb, var(--band-b) 35%, transparent) 0,
+      transparent 42%
+    ),
+    radial-gradient(
+      circle at 82% 78%,
+      color-mix(in srgb, var(--band-a) 40%, transparent) 0,
+      transparent 38%
+    ),
+    var(--surface);
+}
+
+.region-legend__pattern {
+  margin-bottom: 0.45rem;
+}
+
+.region-legend__svg {
+  width: 100%;
+  max-width: min(18rem, 100%);
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  opacity: 0.92;
+}
+
+.region-legend__blob {
+  stroke: var(--board-edge-strong);
+  stroke-width: 2.25;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.region-legend__blob--a {
+  fill: var(--band-a);
+}
+
+.region-legend__blob--b {
+  fill: var(--band-b);
+}
+
+.region-legend__caption {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--muted);
+  text-align: center;
+}
+
+.region-legend__caption strong {
+  color: var(--text);
+  font-weight: 650;
+}
+
 .board {
   display: grid;
   gap: 0;

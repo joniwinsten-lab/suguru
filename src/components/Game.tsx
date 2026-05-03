@@ -5,6 +5,7 @@ import { createInitialState } from '../game/state'
 import { isGiven, isSolved } from '../game/rules'
 import { Board } from './Board'
 import { NumberPad } from './NumberPad'
+import { RegionLegend } from './RegionLegend'
 
 type GameProps = {
   level: Level
@@ -64,6 +65,8 @@ export function Game({ level }: GameProps) {
           onSelect={(row, col) => dispatch({ type: 'SELECT', row, col })}
         />
       </div>
+
+      <RegionLegend />
 
       <NumberPad
         maxDigit={state.level.maxDigit}

@@ -14,13 +14,13 @@
     [1, 0, 0, 0, 0, 7, 7, 7]
   ],
   "givens": [
-    [1, 2, 1, 2, null, null, 2, 3],
-    [null, null, null, null, null, null, null, null],
-    [null, null, 1, null, null, null, null, null],
-    [null, 2, null, null, null, 1, 2, null],
-    [null, null, 1, 2, null, null, null, null],
-    [null, null, null, null, 1, 2, null, null],
-    [null, 1, 2, null, null, null, null, null],
-    [null, null, null, null, null, null, null, null]
+    [1, null, 1, null, null, null, null, null],
+    [null, null, null, null, 1, null, null, null],
+    [null, null, 1, null, null, 8, null, 8],
+    [8, null, null, null, null, 1, null, null],
+    [null, null, 1, null, 8, null, null, null],
+    [null, null, null, null, 1, null, null, 8],
+    [null, 1, null, null, null, null, null, null],
+    [8, null, null, null, 8, null, null, 8]
   ]
 }

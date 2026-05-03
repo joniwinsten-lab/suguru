@@ -32,7 +32,7 @@ npm run preview
 
 ## Tasot
 
-Tasot ovat `src/levels/*.json` (4×4 … 9×9, vaikeusotsikot valikossa; myös Legenda on epäsäännöllisillä alueilla). Muokkaamalla `regions`- ja `givens`-kenttiä voit lisätä omia pulmia; `parseLevel` tarkistaa perusvaliditeetin latauksessa.
+Tasot ovat `src/levels/*.json` (4×4 … 9×9, vaikeusotsikot valikossa; myös Legenda on epäsäännöllisillä alueilla). Vihjeinä on alueittain **pienin ja suurin** oikea luku, jotta pohjadatoissa näkyy myös isoja numeroita (4–9), ei pelkkiä 1–3. Muokkaamalla `regions`- ja `givens`-kenttiä voit lisätä omia pulmia; `parseLevel` tarkistaa perusvaliditeetin latauksessa.
 
 Sovelluksessa voi valita **teeman** (pastelli / tumma / värikäs); valinta tallentuu `localStorage`-avaimeen `suguru-ui-theme`.
 
