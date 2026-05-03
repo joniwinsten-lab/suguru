@@ -1,26 +1,26 @@
 {
   "id": "level-05",
-  "title": "8×8 — vaikeus 1–8",
+  "title": "8×8 — Epäsäännölliset (1–8)",
   "width": 8,
   "height": 8,
   "regions": [
-    [0, 0, 0, 0, 0, 0, 0, 0],
-    [1, 1, 1, 1, 1, 1, 1, 1],
-    [2, 2, 2, 2, 2, 2, 2, 2],
-    [3, 3, 3, 3, 3, 3, 3, 3],
-    [4, 4, 4, 4, 4, 4, 4, 4],
-    [5, 5, 5, 5, 5, 5, 5, 5],
-    [6, 6, 6, 6, 6, 6, 6, 6],
-    [7, 7, 7, 7, 7, 7, 7, 7]
+    [4, 4, 3, 3, 3, 3, 2, 2],
+    [4, 4, 4, 3, 2, 2, 2, 2],
+    [4, 4, 6, 3, 3, 3, 2, 2],
+    [4, 6, 6, 6, 6, 5, 5, 5],
+    [6, 6, 1, 1, 6, 5, 5, 5],
+    [1, 1, 1, 1, 7, 7, 5, 5],
+    [1, 0, 0, 0, 0, 7, 7, 7],
+    [1, 0, 0, 0, 0, 7, 7, 7]
   ],
   "givens": [
-    [1, null, null, null, null, null, null, 8],
-    [null, null, null, 2, null, null, null, null],
-    [null, null, null, null, null, 6, null, null],
-    [null, 4, null, null, null, null, null, null],
-    [null, null, null, null, 5, null, null, null],
-    [null, null, 3, null, null, null, null, null],
-    [null, null, null, null, null, null, 1, null],
-    [8, null, null, null, null, null, null, 6]
+    [1, 2, 1, 2, null, null, 2, 3],
+    [null, null, null, null, null, null, null, null],
+    [null, null, 1, null, null, null, null, null],
+    [null, 2, null, null, null, 1, 2, null],
+    [null, null, 1, 2, null, null, null, null],
+    [null, null, null, null, 1, 2, null, null],
+    [null, 1, 2, null, null, null, null, null],
+    [null, null, null, null, null, null, null, null]
   ]
 }

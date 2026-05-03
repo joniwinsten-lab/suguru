@@ -32,6 +32,8 @@ npm run preview
 
 ## Tasot
 
-Tasot ovat `src/levels/*.json` (4×4 … 8×8, mukana tasot joissa suurin numero on 6, 7 ja 8). Muokkaamalla `regions`- ja `givens`-kenttiä voit lisätä omia pulmia; `parseLevel` tarkistaa perusvaliditeetin latauksessa.
+Tasot ovat `src/levels/*.json` (4×4 … 8×8, epäsäännölliset alueet, suurin numero 6–8). Muokkaamalla `regions`- ja `givens`-kenttiä voit lisätä omia pulmia; `parseLevel` tarkistaa perusvaliditeetin latauksessa.
 
-Apuna uusille asetteluille voi käyttää `scripts/solve-layout.mjs`-skriptiä (stdin: JSON `height`, `width`, `regions`).
+Sovelluksessa voi valita **teeman** (pastelli / tumma / värikäs); valinta tallentuu `localStorage`-avaimeen `suguru-ui-theme`.
+
+Apuna uusille asetteluille: `scripts/solve-layout.mjs` (stdin: JSON `height`, `width`, `regions`) ja `scripts/random-solvable.mjs` (esim. `node scripts/random-solvable.mjs 7 7 7`).

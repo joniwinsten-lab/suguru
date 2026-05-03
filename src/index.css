@@ -1,4 +1,25 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 :root {
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  line-height: 1.45;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Pastelli — pehmeä vaalea oletus */
+:root[data-ui-theme='pastel'],
+:root:not([data-ui-theme]) {
   --text: #0f172a;
   --muted: #64748b;
   --bg: #f8fafc;
@@ -8,48 +29,50 @@
   --accent: #2563eb;
   --danger: #dc2626;
   --success: #15803d;
-  /* Aluerajat: paksu viiva tummempi, ohut ruudukko vaaleampi */
-  --board-edge-strong: #0f172a;
+  --board-edge-strong: #1e293b;
   --board-edge-soft: #cbd5e1;
-  /* Vuorottelevat aluevyöhykkeet (pariton / parillinen region-id) */
   --band-a: #e8eef9;
   --band-b: #e6f4ec;
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
-  line-height: 1.45;
   color: var(--text);
   background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #f1f5f9;
-    --muted: #94a3b8;
-    --bg: #0f172a;
-    --surface: #1e293b;
-    --border: #334155;
-    --border-strong: #94a3b8;
-    --accent: #60a5fa;
-    --danger: #f87171;
-    --success: #4ade80;
-    --board-edge-strong: #e2e8f0;
-    --board-edge-soft: #475569;
-    --band-a: #1a2336;
-    --band-b: #152a24;
-  }
+/* Tumma */
+:root[data-ui-theme='dark'] {
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --border: #334155;
+  --border-strong: #94a3b8;
+  --accent: #60a5fa;
+  --danger: #f87171;
+  --success: #4ade80;
+  --board-edge-strong: #e2e8f0;
+  --board-edge-soft: #475569;
+  --band-a: #1a2336;
+  --band-b: #152a24;
+  color: var(--text);
+  background: var(--bg);
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+/* Värikäs — korkea kontrasti ja kylläiset vyöhykkeet */
+:root[data-ui-theme='colorful'] {
+  --text: #1c0a4a;
+  --muted: #5b21b6;
+  --bg: #fff7ed;
+  --surface: #ffffff;
+  --border: #fdba74;
+  --border-strong: #7c3aed;
+  --accent: #c026d3;
+  --danger: #be123c;
+  --success: #047857;
+  --board-edge-strong: #4c1d95;
+  --board-edge-soft: #fcd34d;
+  --band-a: #dbeafe;
+  --band-b: #fce7f3;
+  color: var(--text);
+  background: var(--bg);
 }
 
 body {
