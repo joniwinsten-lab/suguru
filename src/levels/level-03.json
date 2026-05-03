@@ -1,0 +1,22 @@
+{
+  "id": "level-03",
+  "title": "6×6 — vaikeus 1–6",
+  "width": 6,
+  "height": 6,
+  "regions": [
+    [0, 0, 0, 0, 0, 0],
+    [1, 1, 1, 1, 1, 1],
+    [2, 2, 2, 2, 2, 2],
+    [3, 3, 3, 3, 3, 3],
+    [4, 4, 4, 4, 4, 4],
+    [5, 5, 5, 5, 5, 5]
+  ],
+  "givens": [
+    [1, null, null, null, null, 6],
+    [null, 4, null, null, null, null],
+    [null, null, null, 4, null, null],
+    [null, null, 3, null, null, null],
+    [null, null, null, null, 1, null],
+    [3, null, null, null, null, 2]
+  ]
+}

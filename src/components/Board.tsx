@@ -6,15 +6,21 @@ type BoardProps = {
   onSelect: (row: number, col: number) => void
 }
 
+const THIN = 1
+const THICK = 5
+
 export function Board({ state, onSelect }: BoardProps) {
   const { level, values, selected } = state
   const { width, height, regions } = level
 
+  const sizeClass =
+    width >= 8 ? 'board--large' : width >= 6 ? 'board--medium' : ''
+
   return (
     <div
-      className="board"
+      className={`board ${sizeClass}`.trim()}
       style={{
-        gridTemplateColumns: `repeat(${width}, minmax(2.5rem, 1fr))`,
+        gridTemplateColumns: `repeat(${width}, minmax(1.65rem, 1fr))`,
       }}
       role="grid"
       aria-label="Suguru-ruudukko"
@@ -25,18 +31,19 @@ export function Board({ state, onSelect }: BoardProps) {
           const sel = selected?.row === row && selected?.col === col
           const err = cellShowsError(level, values, row, col)
           const given = isGiven(level, row, col)
-          const thick = 3
-          const thin = 1
+          const rid = regions[row][col]
+
           const br =
             col < width - 1 && regions[row][col] !== regions[row][col + 1]
-              ? thick
-              : thin
+              ? THICK
+              : THIN
           const bb =
             row < height - 1 && regions[row][col] !== regions[row + 1][col]
-              ? thick
-              : thin
-          const rid = regions[row][col]
-          const hue = (rid * 47) % 360
+              ? THICK
+              : THIN
+
+          const edgeStrong = 'var(--board-edge-strong)'
+          const edgeSoft = 'var(--board-edge-soft)'
 
           return (
             <button
@@ -44,6 +51,7 @@ export function Board({ state, onSelect }: BoardProps) {
               type="button"
               className={[
                 'board-cell',
+                rid % 2 === 0 ? 'board-cell--bandA' : 'board-cell--bandB',
                 sel ? 'board-cell--selected' : '',
                 err ? 'board-cell--error' : '',
                 given ? 'board-cell--given' : '',
@@ -53,7 +61,9 @@ export function Board({ state, onSelect }: BoardProps) {
               style={{
                 borderRightWidth: br,
                 borderBottomWidth: bb,
-                background: `hsl(${hue} 35% var(--cell-lightness, 92%) / 0.55)`,
+                borderRightColor: br === THICK ? edgeStrong : edgeSoft,
+                borderBottomColor: bb === THICK ? edgeStrong : edgeSoft,
+                boxShadow: 'inset 0 0 0 0.5px color-mix(in srgb, var(--board-edge-soft) 55%, transparent)',
               }}
               aria-pressed={sel}
               aria-label={describeCell(row, col, v, given)}

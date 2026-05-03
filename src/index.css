@@ -8,7 +8,12 @@
   --accent: #2563eb;
   --danger: #dc2626;
   --success: #15803d;
-  --cell-lightness: 92%;
+  /* Aluerajat: paksu viiva tummempi, ohut ruudukko vaaleampi */
+  --board-edge-strong: #0f172a;
+  --board-edge-soft: #cbd5e1;
+  /* Vuorottelevat aluevyöhykkeet (pariton / parillinen region-id) */
+  --band-a: #e8eef9;
+  --band-b: #e6f4ec;
   font-family:
     system-ui,
     -apple-system,
@@ -34,7 +39,10 @@
     --accent: #60a5fa;
     --danger: #f87171;
     --success: #4ade80;
-    --cell-lightness: 28%;
+    --board-edge-strong: #e2e8f0;
+    --board-edge-soft: #475569;
+    --band-a: #1a2336;
+    --band-b: #152a24;
   }
 }
 

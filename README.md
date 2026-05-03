@@ -32,4 +32,6 @@ npm run preview
 
 ## Tasot
 
-Tasot ovat `src/levels/*.json`. Muokkaamalla `regions`- ja `givens`-kenttiä voit lisätä omia pulmia; `parseLevel` tarkistaa perusvaliditeetin latauksessa.
+Tasot ovat `src/levels/*.json` (4×4 … 8×8, mukana tasot joissa suurin numero on 6, 7 ja 8). Muokkaamalla `regions`- ja `givens`-kenttiä voit lisätä omia pulmia; `parseLevel` tarkistaa perusvaliditeetin latauksessa.
+
+Apuna uusille asetteluille voi käyttää `scripts/solve-layout.mjs`-skriptiä (stdin: JSON `height`, `width`, `regions`).

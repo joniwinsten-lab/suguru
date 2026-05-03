@@ -1,5 +1,5 @@
 .app {
-  max-width: 28rem;
+  max-width: min(36rem, 100%);
   margin: 0 auto;
   padding: 1.5rem 1rem 3rem;
 }
@@ -56,7 +56,7 @@
   display: grid;
   gap: 0;
   width: 100%;
-  max-width: min(100%, 20rem);
+  max-width: min(100%, 22rem);
   margin: 0 auto;
   border: 3px solid var(--border-strong);
   border-radius: 4px;
@@ -64,12 +64,25 @@
   background: var(--surface);
 }
 
+.board--medium {
+  max-width: min(100%, 26rem);
+}
+
+.board--large {
+  max-width: 100%;
+}
+
+.board--large .board-cell {
+  min-height: 2.1rem;
+  font-size: clamp(0.95rem, 2.5vw, 1.15rem);
+}
+
 .board-cell {
   aspect-ratio: 1;
   min-height: 2.75rem;
   border: 0;
   border-style: solid;
-  border-color: var(--border);
+  border-color: var(--board-edge-soft);
   margin: 0;
   padding: 0;
   font-size: 1.25rem;
@@ -81,6 +94,14 @@
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+}
+
+.board-cell--bandA {
+  background: var(--band-a);
+}
+
+.board-cell--bandB {
+  background: var(--band-b);
 }
 
 .board-cell:focus-visible {
