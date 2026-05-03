@@ -14,13 +14,22 @@ export function Board({ state, onSelect }: BoardProps) {
   const { width, height, regions } = level
 
   const sizeClass =
-    width >= 8 ? 'board--large' : width >= 6 ? 'board--medium' : ''
+    width >= 9
+      ? 'board--xlarge'
+      : width >= 8
+        ? 'board--large'
+        : width >= 6
+          ? 'board--medium'
+          : ''
+
+  const minCell =
+    width >= 9 ? '1.35rem' : width >= 8 ? '1.5rem' : '1.65rem'
 
   return (
     <div
       className={`board ${sizeClass}`.trim()}
       style={{
-        gridTemplateColumns: `repeat(${width}, minmax(1.65rem, 1fr))`,
+        gridTemplateColumns: `repeat(${width}, minmax(${minCell}, 1fr))`,
       }}
       role="grid"
       aria-label="Suguru-ruudukko"

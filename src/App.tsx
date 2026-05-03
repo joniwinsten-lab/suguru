@@ -29,11 +29,11 @@ function App() {
 
       <div className="app-toolbar">
         <label className="level-picker">
-          <span className="level-picker__label">Taso</span>
+          <span className="level-picker__label">Vaikeustaso</span>
           <select
             value={levelId}
             onChange={(e) => setLevelId(e.target.value)}
-            aria-label="Valitse taso"
+            aria-label="Valitse vaikeustaso"
           >
             {levels.map((l) => (
               <option key={l.id} value={l.id}>

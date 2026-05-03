@@ -94,9 +94,18 @@
   max-width: 100%;
 }
 
+.board--xlarge {
+  max-width: 100%;
+}
+
 .board--large .board-cell {
   min-height: 2.1rem;
   font-size: clamp(0.95rem, 2.5vw, 1.15rem);
+}
+
+.board--xlarge .board-cell {
+  min-height: 1.85rem;
+  font-size: clamp(0.82rem, 2.2vw, 1.05rem);
 }
 
 .board-cell {

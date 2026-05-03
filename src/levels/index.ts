@@ -4,9 +4,10 @@ import raw02 from './level-02.json'
 import raw03 from './level-03.json'
 import raw04 from './level-04.json'
 import raw05 from './level-05.json'
+import raw06 from './level-06.json'
 import { parseLevel } from '../game/level'
 
-const raws = [raw01, raw02, raw03, raw04, raw05] as LevelJson[]
+const raws = [raw01, raw02, raw03, raw04, raw05, raw06] as LevelJson[]
 
 export const levels = raws.map((raw) => parseLevel(raw))
 
