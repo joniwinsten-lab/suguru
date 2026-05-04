@@ -30,10 +30,17 @@ npm run build
 npm run preview
 ```
 
+GitHub Pages -build (polku `/suguru/`, vastaa osoitetta `https://joniwinsten-lab.github.io/suguru/`):
+
+```bash
+npm run build:gh-pages
+# esikatselu: npm run preview → avaa http://localhost:4173/suguru/
+```
+
+**Julkaisu GitHub Pagesiin:** repon *Settings → Pages → Build and deployment → Source: GitHub Actions*. Push `main`-haaraan ajaa workflowin (`.github/workflows/deploy-pages.yml`), joka buildaa `VITE_BASE_PATH=/suguru/` ja julkaisee `dist`-kansion. Ensimmäisellä kerralla GitHub pyytää hyväksymään *Pages*-ympäristön käyttöön.
+
 ## Tasot
 
-Tasot ovat `src/levels/*.json` (4×4 … 9×9, vaikeusotsikot valikossa; myös Legenda on epäsäännöllisillä alueilla). Vihjeinä on alueittain **pienin ja suurin** oikea luku, jotta pohjadatoissa näkyy myös isoja numeroita (4–9), ei pelkkiä 1–3. Muokkaamalla `regions`- ja `givens`-kenttiä voit lisätä omia pulmia; `parseLevel` tarkistaa perusvaliditeetin latauksessa.
+Kentät generoidaan `npm run build:pools` → `public/pools/{taso}.json`. Oletuksena **3 kenttää** kutakin vaikeustasoa kohti (`POOL_COUNT` ympäristömuuttujalla voi muuttaa). Sovellus lataa valitun tason JSONin ja `parseLevel` validoi sen.
 
-Sovelluksessa voi valita **teeman** (pastelli / tumma / värikäs); valinta tallentuu `localStorage`-avaimeen `suguru-ui-theme`.
-
-Apuna uusille asetteluille: `scripts/solve-layout.mjs` (stdin: JSON `height`, `width`, `regions`) ja `scripts/random-solvable.mjs` (esim. `node scripts/random-solvable.mjs 7 7 7`).
+Apuna asetteluille: `scripts/solve-layout.mjs` (stdin: JSON `height`, `width`, `regions`) ja `scripts/random-solvable.mjs` (esim. `node scripts/random-solvable.mjs 8 8`).

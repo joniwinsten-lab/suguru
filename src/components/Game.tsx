@@ -1,17 +1,32 @@
-import { useCallback, useEffect, useReducer, useRef } from 'react'
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import type { Level } from '../game/types'
 import { gameReducer } from '../game/reducer'
 import { createInitialState } from '../game/state'
 import { isGiven, isSolved } from '../game/rules'
+import {
+  formatElapsed,
+  loadSolveRecord,
+  saveSolveRecord,
+  type SolveRecord,
+} from '../solveStats'
 import { Board } from './Board'
 import { NumberPad } from './NumberPad'
-import { RegionLegend } from './RegionLegend'
 
 type GameProps = {
   level: Level
+  tierId: string
+  tierTitle: string
+  levelIndex: number
+  poolCount: number
 }
 
-export function Game({ level }: GameProps) {
+export function Game({
+  level,
+  tierId,
+  tierTitle,
+  levelIndex,
+  poolCount,
+}: GameProps) {
   const [state, dispatch] = useReducer(
     gameReducer,
     level,
@@ -19,11 +34,43 @@ export function Game({ level }: GameProps) {
   )
 
   const boardRef = useRef<HTMLDivElement>(null)
+  const runStartMsRef = useRef(0)
+  const [elapsedMs, setElapsedMs] = useState(0)
+  const [resetTick, setResetTick] = useState(0)
+  const [storedStats, setStoredStats] = useState<SolveRecord | null>(() =>
+    loadSolveRecord(tierId, levelIndex),
+  )
+  const lastRecordedKey = useRef<string | null>(null)
+
+  useEffect(() => {
+    runStartMsRef.current = Date.now()
+    const tick = () => setElapsedMs(Date.now() - runStartMsRef.current)
+    const t0 = window.setTimeout(tick, 0)
+    const id = window.setInterval(tick, 200)
+    return () => {
+      window.clearTimeout(t0)
+      window.clearInterval(id)
+    }
+  }, [level.id, resetTick])
 
   const solved = isSolved(state.level, state.values)
   const sel = state.selected
   const canEdit =
     sel !== null && !isGiven(state.level, sel.row, sel.col) && !solved
+
+  useEffect(() => {
+    if (!solved) return
+    const key = `${tierId}:${levelIndex}`
+    if (lastRecordedKey.current === key) return
+    lastRecordedKey.current = key
+    const ms = Date.now() - runStartMsRef.current
+    const rec = saveSolveRecord(tierId, levelIndex, ms)
+    setStoredStats(rec)
+  }, [solved, tierId, levelIndex])
+
+  useEffect(() => {
+    lastRecordedKey.current = null
+  }, [level.id])
 
   const onKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -59,14 +106,32 @@ export function Game({ level }: GameProps) {
 
   return (
     <div className="game">
+      <p className="game-meta" aria-live="polite">
+        <span className="game-meta__title">{tierTitle}</span>
+        <span className="game-meta__sep"> · </span>
+        Kenttä {levelIndex + 1}/{poolCount}
+        <span className="game-meta__sep"> · </span>
+        <span className="game-meta__timer">Aika: {formatElapsed(elapsedMs)}</span>
+        {storedStats ? (
+          <>
+            <span className="game-meta__sep"> · </span>
+            Paras: {formatElapsed(storedStats.bestMs)}
+            {storedStats.lastMs !== storedStats.bestMs ? (
+              <>
+                <span className="game-meta__sep"> · </span>
+                Viimeisin: {formatElapsed(storedStats.lastMs)}
+              </>
+            ) : null}
+          </>
+        ) : null}
+      </p>
+
       <div ref={boardRef}>
         <Board
           state={state}
           onSelect={(row, col) => dispatch({ type: 'SELECT', row, col })}
         />
       </div>
-
-      <RegionLegend />
 
       <NumberPad
         maxDigit={state.level.maxDigit}
@@ -76,14 +141,23 @@ export function Game({ level }: GameProps) {
       />
 
       <div className="game-actions">
-        <button type="button" onClick={() => dispatch({ type: 'RESET' })}>
-          Nollaa taso
+        <button
+          type="button"
+          onClick={() => {
+            dispatch({ type: 'RESET' })
+            setResetTick((t) => t + 1)
+          }}
+        >
+          Nollaa kenttä
         </button>
       </div>
 
       {solved ? (
         <p className="game-won" role="status">
-          Ratkaisu oikein — hyvä!
+          Ratkaisu oikein — aika {formatElapsed(elapsedMs)}.
+          {storedStats
+            ? ` Paras tällä kentällä: ${formatElapsed(storedStats.bestMs)}.`
+            : ''}
         </p>
       ) : null}
     </div>

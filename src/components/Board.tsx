@@ -7,7 +7,13 @@ type BoardProps = {
 }
 
 const THIN = 1
-const THICK = 5
+const THICK = 4
+const REGION_COLOR_COUNT = 12
+
+function regionColorClass(regionId: number): string {
+  const i = ((regionId % REGION_COLOR_COUNT) + REGION_COLOR_COUNT) % REGION_COLOR_COUNT
+  return `board-cell--reg${i}`
+}
 
 export function Board({ state, onSelect }: BoardProps) {
   const { level, values, selected } = state
@@ -22,14 +28,11 @@ export function Board({ state, onSelect }: BoardProps) {
           ? 'board--medium'
           : ''
 
-  const minCell =
-    width >= 9 ? '1.35rem' : width >= 8 ? '1.5rem' : '1.65rem'
-
   return (
     <div
       className={`board ${sizeClass}`.trim()}
       style={{
-        gridTemplateColumns: `repeat(${width}, minmax(${minCell}, 1fr))`,
+        gridTemplateColumns: `repeat(${width}, minmax(0, 1fr))`,
       }}
       role="grid"
       aria-label="Suguru-ruudukko"
@@ -43,16 +46,16 @@ export function Board({ state, onSelect }: BoardProps) {
           const rid = regions[row][col]
 
           const br =
-            col < width - 1 && regions[row][col] !== regions[row][col + 1]
+            col === width - 1 || regions[row][col] !== regions[row][col + 1]
               ? THICK
               : THIN
           const bb =
-            row < height - 1 && regions[row][col] !== regions[row + 1][col]
+            row === height - 1 || regions[row][col] !== regions[row + 1][col]
               ? THICK
               : THIN
 
           const edgeStrong = 'var(--board-edge-strong)'
-          const edgeSoft = 'var(--board-edge-soft)'
+          const edgeInner = 'var(--board-edge-inner)'
 
           return (
             <button
@@ -60,7 +63,7 @@ export function Board({ state, onSelect }: BoardProps) {
               type="button"
               className={[
                 'board-cell',
-                rid % 2 === 0 ? 'board-cell--bandA' : 'board-cell--bandB',
+                regionColorClass(rid),
                 sel ? 'board-cell--selected' : '',
                 err ? 'board-cell--error' : '',
                 given ? 'board-cell--given' : '',
@@ -70,9 +73,8 @@ export function Board({ state, onSelect }: BoardProps) {
               style={{
                 borderRightWidth: br,
                 borderBottomWidth: bb,
-                borderRightColor: br === THICK ? edgeStrong : edgeSoft,
-                borderBottomColor: bb === THICK ? edgeStrong : edgeSoft,
-                boxShadow: 'inset 0 0 0 0.5px color-mix(in srgb, var(--board-edge-soft) 55%, transparent)',
+                borderRightColor: br === THICK ? edgeStrong : edgeInner,
+                borderBottomColor: bb === THICK ? edgeStrong : edgeInner,
               }}
               aria-pressed={sel}
               aria-label={describeCell(row, col, v, given)}

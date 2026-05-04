@@ -15,62 +15,22 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-}
 
-/* Pastelli — pehmeä vaalea oletus */
-:root[data-ui-theme='pastel'],
-:root:not([data-ui-theme]) {
   --text: #0f172a;
   --muted: #64748b;
-  --bg: #f8fafc;
+  --bg: #f1f5f9;
   --surface: #ffffff;
   --border: #cbd5e1;
   --border-strong: #475569;
   --accent: #2563eb;
   --danger: #dc2626;
   --success: #15803d;
-  --board-edge-strong: #1e293b;
+  --board-edge-strong: #0f0f0f;
   --board-edge-soft: #cbd5e1;
-  --band-a: #e8eef9;
-  --band-b: #e6f4ec;
-  color: var(--text);
-  background: var(--bg);
-}
-
-/* Tumma */
-:root[data-ui-theme='dark'] {
-  --text: #f1f5f9;
-  --muted: #94a3b8;
-  --bg: #0f172a;
-  --surface: #1e293b;
-  --border: #334155;
-  --border-strong: #94a3b8;
-  --accent: #60a5fa;
-  --danger: #f87171;
-  --success: #4ade80;
-  --board-edge-strong: #e2e8f0;
-  --board-edge-soft: #475569;
-  --band-a: #1a2336;
-  --band-b: #152a24;
-  color: var(--text);
-  background: var(--bg);
-}
-
-/* Värikäs — korkea kontrasti ja kylläiset vyöhykkeet */
-:root[data-ui-theme='colorful'] {
-  --text: #1c0a4a;
-  --muted: #5b21b6;
-  --bg: #fff7ed;
-  --surface: #ffffff;
-  --border: #fdba74;
-  --border-strong: #7c3aed;
-  --accent: #c026d3;
-  --danger: #be123c;
-  --success: #047857;
-  --board-edge-strong: #4c1d95;
-  --board-edge-soft: #fcd34d;
-  --band-a: #dbeafe;
-  --band-b: #fce7f3;
+  --board-edge-inner: #d1d9e6;
+  --board-sheet: #ffffff;
+  --board-digit-given: #5c6578;
+  --board-digit-user: #111827;
   color: var(--text);
   background: var(--bg);
 }

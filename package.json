@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:gh-pages": "VITE_BASE_PATH=/suguru/ npm run build",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:pools": "node scripts/build-level-pools.mjs"
   },
   "dependencies": {
     "react": "^19.2.5",
