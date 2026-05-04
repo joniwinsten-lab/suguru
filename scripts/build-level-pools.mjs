@@ -4,6 +4,7 @@
  * POOL_COUNT oletus 3 kenttää / vaikeustaso (vaihda esim. POOL_COUNT=20).
  *
  * Alueet: yhtenäiset, koko 1…9 solua, ei tasasuuruista jakoa (vähintään kaksi eri kokoa).
+ * 8×8 ja 9×9: aina 1 kpl koko 1, 2 kpl koko 2, 3 kpl koko 3; loput alueet koot 4…9.
  * Vihjeet: pyöristetty 25 % ruudukon soluista, satunnaisesti jaoteltu; arvot oikeasta ratkaisusta.
  *
  *   node scripts/build-level-pools.mjs
@@ -12,7 +13,10 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { solveFromRegions } from './solver-core.mjs'
-import { growVariablePartitionAny } from './variable-partition.mjs'
+import {
+  growVariablePartitionAny,
+  matches8899SmallRegionRule,
+} from './variable-partition.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
@@ -96,8 +100,11 @@ function solveForLayoutBank(regions, H, W) {
 /** Kerää erikokoisia ratkaistavia aluekarttoja (ei tasasuuruista jakoa). */
 function collectRegionLayouts(H, W, want, maxTries, seedSalt) {
   const seen = new Set()
-  const out = []
-  for (let t = 0; t < maxTries && out.length < want; t++) {
+  const preferred = []
+  const other = []
+  const largeSquare = H === W && (H === 8 || H === 9)
+
+  for (let t = 0; t < maxTries && preferred.length + other.length < want; t++) {
     const rng = mulberry32((seedSalt ^ (t * 0x9e3779b1)) >>> 0)
     const regions = growVariablePartitionAny(H, W, rng)
     if (!regions) continue
@@ -105,9 +112,13 @@ function collectRegionLayouts(H, W, want, maxTries, seedSalt) {
     if (seen.has(k)) continue
     if (!solveForLayoutBank(regions, H, W)) continue
     seen.add(k)
-    out.push(regions.map((row) => [...row]))
+    const copy = regions.map((row) => [...row])
+    if (largeSquare && matches8899SmallRegionRule(H, W, regions)) preferred.push(copy)
+    else other.push(copy)
   }
-  return out
+
+  const out = [...preferred, ...other]
+  return out.slice(0, want)
 }
 
 const solMemo = new Map()

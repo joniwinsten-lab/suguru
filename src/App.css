@@ -1,3 +1,32 @@
+.site-nav {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  align-items: center;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.site-nav__link {
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.site-nav__link:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--bg) 85%, var(--surface));
+}
+
+.site-nav__link.active {
+  color: var(--surface);
+  background: var(--accent);
+}
+
 .app {
   max-width: min(36rem, 100%);
   margin: 0 auto;

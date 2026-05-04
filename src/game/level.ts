@@ -20,6 +20,8 @@ function assertDimensions(
 /**
  * Validates structure and Suguru clues; returns a normalized Level.
  * Does not verify unique solution — only that givens do not break rules.
+ *
+ * 8×8- ja 9×9-kentille suositeltu aluehistogrammi: `is8899SmallRegionLayout` (ks. `regionHistogram.ts`).
  */
 export function parseLevel(raw: LevelJson): Level {
   const { id, title, width, height, regions, givens } = raw

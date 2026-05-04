@@ -1,0 +1,229 @@
+.sanuli {
+  --sanuli-correct: #6aaa64;
+  --sanuli-present: #c9b458;
+  --sanuli-absent: #787c7e;
+  --sanuli-tile-border: #d3d6da;
+  --sanuli-tile-text: #1a1a1b;
+}
+
+.sanuli-header h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sanuli-lead {
+  margin: 0 0 1rem;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.sanuli-toast {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  background: var(--text);
+  color: var(--surface);
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 0.2);
+}
+
+.sanuli-board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  max-width: 21rem;
+  margin: 0 auto 1rem;
+}
+
+.sanuli-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.35rem;
+}
+
+@keyframes sanuli-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(6px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+.sanuli-row--shake {
+  animation: sanuli-shake 0.4s ease;
+}
+
+.sanuli-tile {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(1.15rem, 4.5vw, 1.45rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  border: 2px solid var(--sanuli-tile-border);
+  border-radius: 4px;
+  color: var(--sanuli-tile-text);
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.sanuli-tile--empty {
+  border-color: var(--sanuli-tile-border);
+  background: var(--surface);
+}
+
+.sanuli-tile--tbd {
+  border-color: #878a8c;
+  background: var(--surface);
+}
+
+.sanuli-tile--absent {
+  border-color: var(--sanuli-absent);
+  background: var(--sanuli-absent);
+  color: #fff;
+}
+
+.sanuli-tile--present {
+  border-color: var(--sanuli-present);
+  background: var(--sanuli-present);
+  color: #fff;
+}
+
+.sanuli-tile--correct {
+  border-color: var(--sanuli-correct);
+  background: var(--sanuli-correct);
+  color: #fff;
+}
+
+.sanuli-message {
+  text-align: center;
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+}
+
+.sanuli-message--won {
+  font-weight: 700;
+  color: var(--success);
+}
+
+.sanuli-message--lost {
+  color: var(--text);
+}
+
+.sanuli-actions {
+  display: flex;
+  justify-content: center;
+  margin: 0.75rem 0 1rem;
+}
+
+.sanuli-actions button {
+  padding: 0.45rem 1.1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sanuli-actions button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sanuli-keyboard {
+  max-width: 32rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-bottom: 0.5rem;
+}
+
+.sanuli-keyboard__row {
+  display: flex;
+  justify-content: center;
+  gap: 0.35rem;
+  flex-wrap: nowrap;
+}
+
+.sanuli-key {
+  min-width: 1.85rem;
+  flex: 1 1 1.85rem;
+  max-width: 2.65rem;
+  height: 3.1rem;
+  padding: 0 0.2rem;
+  border: none;
+  border-radius: 4px;
+  background: #d3d6da;
+  color: #1a1a1b;
+  font: inherit;
+  font-size: clamp(0.68rem, 2.8vw, 0.82rem);
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: uppercase;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sanuli-key--wide {
+  flex: 1.35 1 auto;
+  max-width: none;
+  font-size: clamp(0.62rem, 2.2vw, 0.75rem);
+}
+
+.sanuli-key:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.sanuli-key--correct {
+  background: var(--sanuli-correct);
+  color: #fff;
+}
+
+.sanuli-key--present {
+  background: var(--sanuli-present);
+  color: #fff;
+}
+
+.sanuli-key--absent {
+  background: var(--sanuli-absent);
+  color: #fff;
+}
+
+@media (max-width: 400px) {
+  .sanuli-key {
+    height: 2.85rem;
+    min-width: 1.55rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sanuli-row--shake {
+    animation: none;
+  }
+}

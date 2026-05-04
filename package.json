@@ -11,11 +11,13 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build:pools": "node scripts/build-level-pools.mjs"
+    "build:pools": "node scripts/build-level-pools.mjs",
+    "build:words": "node scripts/build-fi-5-full.mjs"
   },
   "dependencies": {
     "react": "^19.2.5",
-    "react-dom": "^19.2.5"
+    "react-dom": "^19.2.5",
+    "react-router-dom": "^7.14.2"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
