@@ -4,7 +4,9 @@
  * POOL_COUNT oletus 3 kenttää / vaikeustaso (vaihda esim. POOL_COUNT=20).
  *
  * Alueet: yhtenäiset, koko enintään min(H,W) solua, ei tasasuuruista jakoa (vähintään kaksi eri kokoa).
- * 8×8 ja 9×9: aina 1 kpl koko 1, 2 kpl koko 2, 3 kpl koko 3; loput alueet koot 4…cap (8 tai 9).
+ * 7×7: 1×(1 solu), 2×(2 solua), 3×(3 solua); loput 4…7.
+ * 8×8: 1×(1), 3×(2), 3×(3); loput 4…8.
+ * 9×9: 2×(1), 3×(2), 3×(3), 2×(4 solua); loput 5…9.
  * Vihjeet: pyöristetty 25 % ruudukon soluista, satunnaisesti jaoteltu; arvot oikeasta ratkaisusta.
  *
  *   node scripts/build-level-pools.mjs
@@ -14,8 +16,9 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { solveFromRegions } from './solver-core.mjs'
 import {
+  growGuidedSmallRegionPartition,
   growVariablePartitionAny,
-  matches8899SmallRegionRule,
+  matchesGuidedSmallRegionHistogram,
 } from './variable-partition.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -23,7 +26,13 @@ const root = join(__dirname, '..')
 const outDir = join(root, 'public', 'pools')
 
 const POOL_COUNT = parseInt(process.env.POOL_COUNT || '3', 10)
-const GIVEN_CELL_FRACTION = 0.25
+
+function givenFractionForTier(tierId) {
+  if (tierId === 'hard-7') return 0.45
+  if (tierId === 'pro-8') return 0.48
+  if (tierId === 'legend-9') return 0.5
+  return 0.25
+}
 
 function mulberry32(seed) {
   return function () {
@@ -42,12 +51,12 @@ function shuffleInPlace(arr, rng) {
 }
 
 /** Satunnaiset solut; lukumäärä = max(1, round(H*W * 25%)). Arvot ratkaisusta → vihjeet ovat aina säännönmukaiset. */
-function givensFractionRandomSeeded(regions, sol, seed) {
+function givensFractionRandomSeeded(regions, sol, seed, fraction) {
   const H = regions.length
   const W = regions[0].length
   const total = H * W
   const rng = mulberry32(seed >>> 0)
-  const k = Math.min(total, Math.max(1, Math.round(total * GIVEN_CELL_FRACTION)))
+  const k = Math.min(total, Math.max(1, Math.round(total * fraction)))
   const cells = []
   for (let r = 0; r < H; r++) {
     for (let c = 0; c < W; c++) {
@@ -106,6 +115,46 @@ const CURATED_4x4 = [
   ],
 ]
 
+/** Kiinteät, solverilla verifioidut ohjatut histogrammit pyydettyihin 7×7/8×8/9×9 sääntöihin. */
+const CURATED_GUIDED = {
+  'hard-7': [
+    [
+      [0, 0, 0, 0, 1, 1, 2],
+      [3, 0, 4, 5, 5, 5, 2],
+      [3, 4, 4, 4, 5, 5, 2],
+      [3, 4, 6, 7, 8, 7, 9],
+      [3, 4, 6, 7, 7, 7, 9],
+      [3, 10, 10, 10, 7, 7, 9],
+      [10, 10, 10, 10, 11, 11, 11],
+    ],
+  ],
+  'pro-8': [
+    [
+      [0, 0, 1, 1, 1, 2, 2, 2],
+      [3, 3, 3, 4, 2, 2, 2, 2],
+      [3, 3, 4, 4, 5, 5, 6, 6],
+      [7, 4, 4, 4, 5, 8, 8, 6],
+      [7, 9, 4, 10, 10, 10, 8, 6],
+      [7, 9, 4, 10, 10, 10, 8, 8],
+      [7, 11, 11, 12, 12, 10, 10, 13],
+      [14, 11, 11, 11, 11, 11, 13, 13],
+    ],
+  ],
+  'legend-9': [
+    [
+      [0, 1, 1, 1, 2, 2, 3, 3, 4],
+      [0, 1, 1, 1, 1, 1, 3, 3, 4],
+      [0, 0, 5, 5, 3, 3, 3, 6, 4],
+      [7, 7, 5, 5, 3, 8, 8, 6, 6],
+      [7, 7, 7, 9, 10, 10, 10, 6, 6],
+      [7, 11, 7, 9, 10, 10, 6, 6, 6],
+      [11, 11, 12, 9, 13, 14, 15, 14, 16],
+      [12, 12, 12, 13, 13, 14, 15, 14, 14],
+      [12, 17, 12, 13, 13, 14, 14, 14, 14],
+    ],
+  ],
+}
+
 /** Yksi ratkaisuyritys solmurajalla (tyhjät jaot hylätään ilman useaa täyttä DFS:ää). */
 function solveForLayoutBank(regions, H, W) {
   const n = H * W
@@ -123,11 +172,25 @@ function solveForLayoutBank(regions, H, W) {
 }
 
 /** Kerää erikokoisia ratkaistavia aluekarttoja (ei tasasuuruista jakoa). */
-function collectRegionLayouts(H, W, want, maxTries, seedSalt) {
+function collectRegionLayouts(tierId, H, W, want, maxTries, seedSalt) {
   const seen = new Set()
   const preferred = []
   const other = []
-  const largeSquare = H === W && (H === 8 || H === 9)
+  const guidedSquare = H === W && H >= 7 && H <= 9
+
+  const curated = CURATED_GUIDED[tierId]
+  if (curated) {
+    for (const regions of curated) {
+      const k = JSON.stringify(regions)
+      if (seen.has(k)) continue
+      if (!matchesGuidedSmallRegionHistogram(H, W, regions)) continue
+      if (!solveForLayoutBank(regions, H, W)) continue
+      seen.add(k)
+      preferred.push(regions.map((row) => [...row]))
+      if (preferred.length >= want) return preferred.slice(0, want)
+    }
+    if (preferred.length > 0) return preferred
+  }
 
   if (H === 4 && W === 4) {
     for (const regions of CURATED_4x4) {
@@ -151,8 +214,28 @@ function collectRegionLayouts(H, W, want, maxTries, seedSalt) {
     if (!solveForLayoutBank(regions, H, W)) continue
     seen.add(k)
     const copy = regions.map((row) => [...row])
-    if (largeSquare && matches8899SmallRegionRule(H, W, regions)) preferred.push(copy)
+    if (guidedSquare && matchesGuidedSmallRegionHistogram(H, W, regions)) preferred.push(copy)
     else other.push(copy)
+  }
+
+  const guidedExtra =
+    H === 7 ? 6_000 : H === 8 ? 10_000 : H === 9 ? 14_000 : 0
+  if (guidedSquare && preferred.length < want) {
+    for (
+      let t = 0;
+      t < guidedExtra && preferred.length < want;
+      t++
+    ) {
+      const rng = mulberry32((seedSalt ^ 0xcafe_5eed ^ (t * 0xdeadbeef)) >>> 0)
+      const regions = growGuidedSmallRegionPartition(H, W, rng)
+      if (!regions) continue
+      const k = JSON.stringify(regions)
+      if (seen.has(k)) continue
+      if (!matchesGuidedSmallRegionHistogram(H, W, regions)) continue
+      if (!solveForLayoutBank(regions, H, W)) continue
+      seen.add(k)
+      preferred.push(regions.map((row) => [...row]))
+    }
   }
 
   const out = [...preferred, ...other]
@@ -174,13 +257,14 @@ function solutionFor(regions) {
 function buildTier(tier) {
   const levels = []
   const { id, title, h, w } = tier
+  const givenFraction = givenFractionForTier(id)
 
   const layoutWant = Math.min(10, POOL_COUNT)
   const layoutMaxTries = id === 'legend-9' ? 4500 : 2200
   const seedSalt = hashSeed(id, 0xf00d_5eed)
-  let layoutBank = collectRegionLayouts(h, w, layoutWant, layoutMaxTries, seedSalt)
+  let layoutBank = collectRegionLayouts(id, h, w, layoutWant, layoutMaxTries, seedSalt)
   if (layoutBank.length === 0) {
-    layoutBank = collectRegionLayouts(h, w, layoutWant, 12_000, seedSalt ^ 0xace0_ace0)
+    layoutBank = collectRegionLayouts(id, h, w, layoutWant, 12_000, seedSalt ^ 0xace0_ace0)
   }
   if (layoutBank.length === 0) {
     throw new Error(`no solvable heterogeneous layouts for ${id}`)
@@ -192,7 +276,7 @@ function buildTier(tier) {
     if (!sol) throw new Error(`unsolvable ${id}`)
 
     const seed = hashSeed(id, i * 7919 + 13)
-    const givens = givensFractionRandomSeeded(regions, sol, seed)
+    const givens = givensFractionRandomSeeded(regions, sol, seed, givenFraction)
 
     levels.push({
       id: `${id}-${String(i).padStart(3, '0')}`,

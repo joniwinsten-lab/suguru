@@ -2,8 +2,10 @@
  * Satunnainen ortogonaalinen jako: jokainen alue on yhtenäinen, koko 1…cap (cap = min(H,W)).
  * Ei tasasuuruista jakoa (vähintään kaksi eri kokoa).
  *
- * 8×8 ja 9×9: aina tasan 1 alue kooltaan 1, 2 aluetta kooltaan 2, 3 aluetta kooltaan 3;
- * loput alueet kooltaan 4…cap (9×9 → 4…9, 8×8 → 4…8).
+ * Ohjatut histogrammit (_helpompi kuin vapaa jako):
+ * 7×7: 1×(1 solu), 2×(2 solua), 3×(3 solua); loput alueet 4…7.
+ * 8×8: 1×(1), 3×(2), 3×(3); loput 4…8.
+ * 9×9: 2×(1), 3×(2), 3×(3), 2×(4); loput 5…9 (ei ylimääräisiä 4 alkioita isoissa tapauksissa).
  */
 function gridDigitCap(H, W) {
   return Math.min(H, W)
@@ -127,19 +129,52 @@ export function regionSizeHistogram(regions) {
   return hist
 }
 
-/** 8×8 / 9×9: 1×1, 2×2, 3×3; muut alueet vain 4…cap (cap = ruudukon sivu). */
-export function matches8899SmallRegionRule(H, W, regions) {
-  if (H !== W || (H !== 8 && H !== 9)) return true
+/** 7×7 / 8×8 / 9×9 — pienten alueiden tavoitehistogrammi (+ isot alueet). */
+export function matchesGuidedSmallRegionHistogram(H, W, regions) {
+  if (H !== W || ![7, 8, 9].includes(H)) return true
   const cap = gridDigitCap(H, W)
   const hist = regionSizeHistogram(regions)
-  if ((hist.get(1) ?? 0) !== 1) return false
-  if ((hist.get(2) ?? 0) !== 2) return false
-  if ((hist.get(3) ?? 0) !== 3) return false
+  if (H === 7) {
+    if ((hist.get(1) ?? 0) !== 1) return false
+    if ((hist.get(2) ?? 0) !== 2) return false
+    if ((hist.get(3) ?? 0) !== 3) return false
+  } else if (H === 8) {
+    if ((hist.get(1) ?? 0) !== 1) return false
+    if ((hist.get(2) ?? 0) !== 3) return false
+    if ((hist.get(3) ?? 0) !== 3) return false
+  } else {
+    if ((hist.get(1) ?? 0) !== 2) return false
+    if ((hist.get(2) ?? 0) !== 3) return false
+    if ((hist.get(3) ?? 0) !== 3) return false
+    if ((hist.get(4) ?? 0) !== 2) return false
+  }
+  const minLarge = H === 9 ? 5 : 4
   for (const [size, n] of hist) {
     if (size < 1 || size > cap || n < 1) return false
-    if (size <= 3) continue
+    if (size < minLarge) continue
+    if (size > cap) return false
   }
   return true
+}
+
+/** @deprecated käytä matchesGuidedSmallRegionHistogram — sama rajapinta pool-skriptejä varten */
+export function matches8899SmallRegionRule(H, W, regions) {
+  return matchesGuidedSmallRegionHistogram(H, W, regions)
+}
+
+/** Kiinteät pienet koot (yhden regionin alkion koko). */
+function guidedFixedCells(H) {
+  if (H === 7) return [1, 2, 2, 3, 3, 3]
+  if (H === 8) return [1, 2, 2, 2, 3, 3, 3]
+  if (H === 9) return [1, 1, 2, 2, 2, 3, 3, 3, 4, 4]
+  return null
+}
+
+function guidedBigPartitionBounds(H) {
+  const cap = gridDigitCap(H, H)
+  if (H === 9) return { minChunk: 5, maxChunk: cap }
+  if (H === 7 || H === 8) return { minChunk: 4, maxChunk: cap }
+  return null
 }
 
 /**
@@ -183,14 +218,15 @@ function shuffleSmall(arr, rng) {
   return a
 }
 
-/** Kiinteät pienet + satunnainen 4…9-jako; kasvatus: pienet ensin, sitten isot laskevassa. */
-function build8899RegionSizes(H, rng) {
-  const cap = gridDigitCap(H, H)
-  const fixed = [1, 2, 2, 3, 3, 3]
-  const fixedSum = 14
+/** Kiinteät pienet + satunnainen iso jako; järjestys: suurimmista alaspäin (+ sekoitetut pienet). */
+function buildGuidedSmallRegionSizes(H, rng) {
+  const fixed = guidedFixedCells(H)
+  const bounds = guidedBigPartitionBounds(H)
+  if (!fixed || !bounds) return null
   const total = H * H
+  const fixedSum = fixed.reduce((a, b) => a + b, 0)
   const rem = total - fixedSum
-  const big = splitIntoChunkRange(rem, rng, 4, cap)
+  const big = splitIntoChunkRange(rem, rng, bounds.minChunk, bounds.maxChunk)
   if (!big) return null
   const smallShuffled = shuffleSmall(fixed, rng)
   const bigDesc = [...big].sort((a, b) => b - a)
@@ -278,15 +314,18 @@ function regionCountHistBySize(groups) {
 }
 
 /**
- * 8×8 / 9×9: ohjattu yhdistely kohti tavoitehistogrammia (1×1, 2×2, 3×3 + 4…9).
+ * 7×7 / 8×8 / 9×9: ohjattu yhdistely kohti tavoitehistogrammia (lisää pieniä alueita).
  * @returns {number[][] | null}
  */
-export function grow8899ByMerging(H, W, rng) {
-  if (H !== W || (H !== 8 && H !== 9)) return null
+export function growGuidedSmallRegionByMerging(H, W, rng) {
+  if (H !== W || ![7, 8, 9].includes(H)) return null
   const cap = gridDigitCap(H, W)
   const total = H * H
-  const fixed = [1, 2, 2, 3, 3, 3]
-  const big = splitIntoChunkRange(total - 14, rng, 4, cap)
+  const fixed = guidedFixedCells(H)
+  const bounds = guidedBigPartitionBounds(H)
+  if (!fixed || !bounds) return null
+  const fixedSum = fixed.reduce((a, b) => a + b, 0)
+  const big = splitIntoChunkRange(total - fixedSum, rng, bounds.minChunk, bounds.maxChunk)
   if (!big) return null
 
   const targetHist = new Map()
@@ -390,22 +429,45 @@ export function grow8899ByMerging(H, W, rng) {
 }
 
 /**
- * 8×8 tai 9×9: satunnainen jako, joka täyttää 1/2/3-säännön.
+ * 7×7 / 8×8 / 9×9: satunnainen jako ohjatulla pienten alueiden histogramilla.
  * @returns {number[][] | null}
  */
-export function grow8899Partition(H, W, rng) {
-  if (H !== W || (H !== 8 && H !== 9)) return null
-  for (let k = 0; k < 120; k++) {
-    const m = grow8899ByMerging(H, W, rng)
-    if (m) return m
+export function growGuidedSmallRegionPartition(H, W, rng) {
+  if (H !== W || ![7, 8, 9].includes(H)) return null
+  if (H >= 8) {
+    for (let k = 0; k < 160; k++) {
+      const m = growGuidedSmallRegionByMerging(H, W, rng)
+      if (m) return m
+    }
+    for (let k = 0; k < 100; k++) {
+      const sizes = buildGuidedSmallRegionSizes(H, rng)
+      if (!sizes) continue
+      const g = growPartitionWithRegionSizes(H, W, sizes, rng)
+      if (g) return g
+    }
+    return null
   }
-  for (let k = 0; k < 80; k++) {
-    const sizes = build8899RegionSizes(H, rng)
+  for (let k = 0; k < 160; k++) {
+    const sizes = buildGuidedSmallRegionSizes(H, rng)
     if (!sizes) continue
     const g = growPartitionWithRegionSizes(H, W, sizes, rng)
     if (g) return g
   }
+  for (let k = 0; k < 120; k++) {
+    const m = growGuidedSmallRegionByMerging(H, W, rng)
+    if (m) return m
+  }
   return null
+}
+
+/** @deprecated käytä growGuidedSmallRegionPartition */
+export function grow8899Partition(H, W, rng) {
+  return growGuidedSmallRegionPartition(H, W, rng)
+}
+
+/** @deprecated käytä growGuidedSmallRegionByMerging */
+export function grow8899ByMerging(H, W, rng) {
+  return growGuidedSmallRegionByMerging(H, W, rng)
 }
 
 /**
@@ -491,7 +553,13 @@ export function growVariablePartition(H, W, rng, opts = {}) {
  */
 export function growVariablePartitionAny(H, W, rng, opts = {}) {
   const n = H * W
-  /** Yhdistely ensin: 8899 histogram -jako voi olla ratkaisematon vaikka topologia näyttää hyvältä. */
+  /** 7×7: vain ohattu jako (histogrammi pakollinen). 8–9: yhdistely ensin (nopeasti ratkaistavia). */
+  if (H === W && H === 7) {
+    for (let a = 0; a < 120; a++) {
+      const g = growGuidedSmallRegionPartition(H, W, rng)
+      if (g) return g
+    }
+  }
   if (n >= 16) {
     for (let a = 0; a < 120; a++) {
       const m = growVariablePartitionByMerging(H, W, rng)
@@ -500,7 +568,7 @@ export function growVariablePartitionAny(H, W, rng, opts = {}) {
   }
   if (H === W && (H === 8 || H === 9)) {
     for (let a = 0; a < 120; a++) {
-      const g = grow8899Partition(H, W, rng)
+      const g = growGuidedSmallRegionPartition(H, W, rng)
       if (g) return g
     }
   }
