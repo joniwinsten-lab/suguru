@@ -1,5 +1,5 @@
 import type { Level } from './types'
-import { flatIndex, neighborCoords } from './grid'
+import { flatIndex, gridDigitCap, neighborCoords } from './grid'
 
 /** Same value twice in region (only non-null cells). */
 export function regionHasDuplicate(
@@ -101,6 +101,8 @@ export function isDigitInRangeForCell(
   digit: number,
 ): boolean {
   const rid = level.cellRegion[flatIndex(row, col, level.width)]
-  const max = level.regionSize.get(rid) ?? 0
+  const regionMax = level.regionSize.get(rid) ?? 0
+  const cap = gridDigitCap(level.width, level.height)
+  const max = Math.min(regionMax, cap)
   return digit >= 1 && digit <= max
 }

@@ -22,8 +22,9 @@ export type Level = {
   regionCells: ReadonlyMap<number, readonly number[]>
   /** flat index -> region id */
   cellRegion: readonly number[]
-  /** region id -> size (must match max digit in that region) */
+  /** region id -> size (≤ gridDigitCap; max digit in that region equals this size) */
   regionSize: ReadonlyMap<number, number>
+  /** Suurin tarvittava numeronäppäin: suurin aluekoko (aina ≤ min(width,height)). */
   maxDigit: number
 }
 

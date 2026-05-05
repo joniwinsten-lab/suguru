@@ -1,10 +1,13 @@
 /**
- * Satunnainen ortogonaalinen jako: jokainen alue on yhtenäinen, koko 1…9 solua.
+ * Satunnainen ortogonaalinen jako: jokainen alue on yhtenäinen, koko 1…cap (cap = min(H,W)).
  * Ei tasasuuruista jakoa (vähintään kaksi eri kokoa).
  *
  * 8×8 ja 9×9: aina tasan 1 alue kooltaan 1, 2 aluetta kooltaan 2, 3 aluetta kooltaan 3;
- * loput alueet kooltaan 4…9 (lukumäärä ja koot satunnaisia, summa täyttää ruudukon).
+ * loput alueet kooltaan 4…cap (9×9 → 4…9, 8×8 → 4…8).
  */
+function gridDigitCap(H, W) {
+  return Math.min(H, W)
+}
 const orth = [
   [-1, 0],
   [1, 0],
@@ -16,13 +19,14 @@ function key(r, c) {
   return `${r},${c}`
 }
 
-function pickTargetSize(rem, rng) {
+function pickTargetSize(rem, rng, cap) {
   if (rem <= 1) return 1
-  if (rem <= 9) {
+  const c = Math.min(cap, rem)
+  if (rem <= cap) {
     if (rng() < 0.35) return rem
     return 1 + Math.floor(rng() * (rem - 1))
   }
-  return 1 + Math.floor(rng() * Math.min(9, rem - 1))
+  return 1 + Math.floor(rng() * Math.min(cap, rem - 1))
 }
 
 /**
@@ -30,6 +34,7 @@ function pickTargetSize(rem, rng) {
  * pareja kun yhteenlaskettu koko ≤ 9. Tuottaa usein ratkaistavampia laudat isolla ruudukolla.
  */
 export function growVariablePartitionByMerging(H, W, rng) {
+  const cap = gridDigitCap(H, W)
   const lab = Array.from({ length: H }, (_, r) =>
     Array.from({ length: W }, (_, c) => r * W + c),
   )
@@ -62,7 +67,7 @@ export function growVariablePartitionByMerging(H, W, rng) {
             hi = Math.max(a, b)
           const sa = groups.get(lo).length,
             sb = groups.get(hi).length
-          if (sa + sb <= 9) edges.push([lo, hi])
+          if (sa + sb <= cap) edges.push([lo, hi])
         }
       }
     }
@@ -122,15 +127,16 @@ export function regionSizeHistogram(regions) {
   return hist
 }
 
-/** 8×8 / 9×9: 1×1, 2×2, 3×3; muut alueet vain 4…9. */
+/** 8×8 / 9×9: 1×1, 2×2, 3×3; muut alueet vain 4…cap (cap = ruudukon sivu). */
 export function matches8899SmallRegionRule(H, W, regions) {
   if (H !== W || (H !== 8 && H !== 9)) return true
+  const cap = gridDigitCap(H, W)
   const hist = regionSizeHistogram(regions)
   if ((hist.get(1) ?? 0) !== 1) return false
   if ((hist.get(2) ?? 0) !== 2) return false
   if ((hist.get(3) ?? 0) !== 3) return false
   for (const [size, n] of hist) {
-    if (size < 1 || size > 9 || n < 1) return false
+    if (size < 1 || size > cap || n < 1) return false
     if (size <= 3) continue
   }
   return true
@@ -148,18 +154,19 @@ function histogramEquals(a, b) {
   return true
 }
 
-function splitInto4to9(n, rng) {
+/** Jaa n osiin väliltä [minChunk, maxChunk] (8899-isot alueet). */
+function splitIntoChunkRange(n, rng, minChunk, maxChunk) {
   for (let t = 0; t < 4000; t++) {
     const parts = []
     let rem = n
-    while (rem > 9) {
-      const maxS = Math.min(9, rem - 4)
-      if (maxS < 4) break
-      const s = 4 + Math.floor(rng() * (maxS - 4 + 1))
+    while (rem > maxChunk) {
+      const maxS = Math.min(maxChunk, rem - minChunk)
+      if (maxS < minChunk) break
+      const s = minChunk + Math.floor(rng() * (maxS - minChunk + 1))
       parts.push(s)
       rem -= s
     }
-    if (rem >= 4 && rem <= 9) {
+    if (rem >= minChunk && rem <= maxChunk) {
       parts.push(rem)
       return parts
     }
@@ -178,11 +185,12 @@ function shuffleSmall(arr, rng) {
 
 /** Kiinteät pienet + satunnainen 4…9-jako; kasvatus: pienet ensin, sitten isot laskevassa. */
 function build8899RegionSizes(H, rng) {
+  const cap = gridDigitCap(H, H)
   const fixed = [1, 2, 2, 3, 3, 3]
   const fixedSum = 14
   const total = H * H
   const rem = total - fixedSum
-  const big = splitInto4to9(rem, rng)
+  const big = splitIntoChunkRange(rem, rng, 4, cap)
   if (!big) return null
   const smallShuffled = shuffleSmall(fixed, rng)
   const bigDesc = [...big].sort((a, b) => b - a)
@@ -195,6 +203,7 @@ function build8899RegionSizes(H, rng) {
  * @returns {number[][] | null}
  */
 export function growPartitionWithRegionSizes(H, W, sizesDescending, rng) {
+  const cap = gridDigitCap(H, W)
   const unassigned = new Map()
   for (let r = 0; r < H; r++) {
     for (let c = 0; c < W; c++) {
@@ -206,7 +215,7 @@ export function growPartitionWithRegionSizes(H, W, sizesDescending, rng) {
   let rid = 0
 
   for (const need of sizesDescending) {
-    if (need < 1 || need > 9) return null
+    if (need < 1 || need > cap) return null
     if (unassigned.size < need) return null
 
     const starts = [...unassigned.values()]
@@ -274,9 +283,10 @@ function regionCountHistBySize(groups) {
  */
 export function grow8899ByMerging(H, W, rng) {
   if (H !== W || (H !== 8 && H !== 9)) return null
+  const cap = gridDigitCap(H, W)
   const total = H * H
   const fixed = [1, 2, 2, 3, 3, 3]
-  const big = splitInto4to9(total - 14, rng)
+  const big = splitIntoChunkRange(total - 14, rng, 4, cap)
   if (!big) return null
 
   const targetHist = new Map()
@@ -319,7 +329,7 @@ export function grow8899ByMerging(H, W, rng) {
             hi = Math.max(a, b)
           const sa = groups.get(lo).length,
             sb = groups.get(hi).length
-          if (sa + sb <= 9) edges.push([lo, hi, sa, sb])
+          if (sa + sb <= cap) edges.push([lo, hi, sa, sb])
         }
       }
     }
@@ -406,6 +416,7 @@ export function grow8899Partition(H, W, rng) {
  * @returns {number[][] | null}
  */
 function tryGrowVariablePartitionOnce(H, W, rng) {
+  const cap = gridDigitCap(H, W)
   const unassigned = new Map()
   for (let r = 0; r < H; r++) {
     for (let c = 0; c < W; c++) {
@@ -418,7 +429,7 @@ function tryGrowVariablePartitionOnce(H, W, rng) {
 
   while (unassigned.size > 0) {
     const rem = unassigned.size
-    const need = pickTargetSize(rem, rng)
+    const need = pickTargetSize(rem, rng, cap)
     const starts = [...unassigned.values()]
     const start = starts[Math.floor(rng() * starts.length)]
 
@@ -480,16 +491,17 @@ export function growVariablePartition(H, W, rng, opts = {}) {
  */
 export function growVariablePartitionAny(H, W, rng, opts = {}) {
   const n = H * W
+  /** Yhdistely ensin: 8899 histogram -jako voi olla ratkaisematon vaikka topologia näyttää hyvältä. */
+  if (n >= 16) {
+    for (let a = 0; a < 120; a++) {
+      const m = growVariablePartitionByMerging(H, W, rng)
+      if (m) return m
+    }
+  }
   if (H === W && (H === 8 || H === 9)) {
     for (let a = 0; a < 120; a++) {
       const g = grow8899Partition(H, W, rng)
       if (g) return g
-    }
-  }
-  if (n > 16) {
-    for (let a = 0; a < 120; a++) {
-      const m = growVariablePartitionByMerging(H, W, rng)
-      if (m) return m
     }
   }
   return growVariablePartition(H, W, rng, opts)

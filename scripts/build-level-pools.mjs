@@ -3,8 +3,8 @@
  * Generoi public/pools/{tierId}.json — useita satunnaisia ratkaistavia kenttiä / vaikeustaso.
  * POOL_COUNT oletus 3 kenttää / vaikeustaso (vaihda esim. POOL_COUNT=20).
  *
- * Alueet: yhtenäiset, koko 1…9 solua, ei tasasuuruista jakoa (vähintään kaksi eri kokoa).
- * 8×8 ja 9×9: aina 1 kpl koko 1, 2 kpl koko 2, 3 kpl koko 3; loput alueet koot 4…9.
+ * Alueet: yhtenäiset, koko enintään min(H,W) solua, ei tasasuuruista jakoa (vähintään kaksi eri kokoa).
+ * 8×8 ja 9×9: aina 1 kpl koko 1, 2 kpl koko 2, 3 kpl koko 3; loput alueet koot 4…cap (8 tai 9).
  * Vihjeet: pyöristetty 25 % ruudukon soluista, satunnaisesti jaoteltu; arvot oikeasta ratkaisusta.
  *
  *   node scripts/build-level-pools.mjs
@@ -81,6 +81,31 @@ const TIERS = [
   { id: 'legend-9', title: '9×9 — Legenda', h: 9, w: 9 },
 ]
 
+/**
+ * 4×4: satunnainen jako + kapasiteetti ≤4 tuottaa käytännössä vain ratkaisemattomia karttoja.
+ * Kolme klassista tasakokoista jakoa (takavaihe voi silti näyttää eri vihjeitä / kierroksia).
+ */
+const CURATED_4x4 = [
+  [
+    [0, 0, 1, 1],
+    [0, 0, 1, 1],
+    [2, 2, 3, 3],
+    [2, 2, 3, 3],
+  ],
+  [
+    [0, 0, 0, 0],
+    [1, 1, 1, 1],
+    [2, 2, 2, 2],
+    [3, 3, 3, 3],
+  ],
+  [
+    [0, 1, 2, 3],
+    [0, 1, 2, 3],
+    [0, 1, 2, 3],
+    [0, 1, 2, 3],
+  ],
+]
+
 /** Yksi ratkaisuyritys solmurajalla (tyhjät jaot hylätään ilman useaa täyttä DFS:ää). */
 function solveForLayoutBank(regions, H, W) {
   const n = H * W
@@ -103,6 +128,19 @@ function collectRegionLayouts(H, W, want, maxTries, seedSalt) {
   const preferred = []
   const other = []
   const largeSquare = H === W && (H === 8 || H === 9)
+
+  if (H === 4 && W === 4) {
+    for (const regions of CURATED_4x4) {
+      const k = JSON.stringify(regions)
+      if (seen.has(k)) continue
+      if (!solveForLayoutBank(regions, H, W)) continue
+      seen.add(k)
+      other.push(regions.map((row) => [...row]))
+      if (preferred.length + other.length >= want) {
+        return [...preferred, ...other].slice(0, want)
+      }
+    }
+  }
 
   for (let t = 0; t < maxTries && preferred.length + other.length < want; t++) {
     const rng = mulberry32((seedSalt ^ (t * 0x9e3779b1)) >>> 0)

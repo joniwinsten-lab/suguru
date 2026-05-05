@@ -8,6 +8,7 @@ export function solveFromRegions(regions, opts = {}) {
   const maxNodes = opts.maxNodes ?? Infinity
   const H = regions.length
   const W = regions[0].length
+  const gridCap = Math.min(W, H)
 
   const neighbors = (r, c) => {
     const o = []
@@ -65,7 +66,7 @@ export function solveFromRegions(regions, opts = {}) {
     if (maxNodes !== Infinity && ++nodes > maxNodes) return null
     if (pos === cells.length) return grid
     const [r, c] = cells[pos]
-    const n = regionSize.get(rid(r, c))
+    const n = Math.min(regionSize.get(rid(r, c)), gridCap)
     for (let d = 1; d <= n; d++) {
       if (!partialOk(grid, r, c, d)) continue
       grid[r][c] = d

@@ -28,7 +28,10 @@ function assertGivensFraction(level: Level): void {
     }
   }
   expect(n).toBe(expected)
-  expect(new Set(level.regionSize.values()).size).toBeGreaterThanOrEqual(2)
+  const cap = Math.min(width, height)
+  if (cap >= 6) {
+    expect(new Set(level.regionSize.values()).size).toBeGreaterThanOrEqual(2)
+  }
 }
 
 describe('pools', () => {
@@ -38,11 +41,15 @@ describe('pools', () => {
     expect(pack.levels[0]).toBeTruthy()
     const level = parseLevel(pack.levels[0])
     expect(level.maxDigit).toBeGreaterThanOrEqual(1)
-    expect(level.maxDigit).toBeLessThanOrEqual(9)
-    expect(new Set(level.regionSize.values()).size).toBeGreaterThanOrEqual(2)
+    expect(level.maxDigit).toBeLessThanOrEqual(
+      Math.min(level.width, level.height),
+    )
+    if (Math.min(level.width, level.height) >= 6) {
+      expect(new Set(level.regionSize.values()).size).toBeGreaterThanOrEqual(2)
+    }
   })
 
-  it('beginner pool levels have 25% givens and heterogeneous regions', () => {
+  it('beginner pool levels have 25% givens (≥6×6: erikokoiset alueet)', () => {
     const pack = readPool('beginner-4a')
     for (let i = 0; i < pack.count; i++) {
       const level = parseLevel(pack.levels[i])

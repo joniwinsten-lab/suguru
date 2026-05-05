@@ -53,7 +53,8 @@ export function SuguruPage() {
       <header className="app-header">
         <h1>Suguru</h1>
         <p className="app-lead">
-          Täytä jokainen alue luvuilla 1…n (n = alueen koko). Vierekkäiset
+          Täytä jokainen alue eri luvuin 1…k (k = alueen koko). N×N-ruudukolla
+          suurin käytettävä luku on N (4×4 → 1…4, 8×8 → 1…8, 9×9 → 1…9). Vierekkäiset
           solut (myös vinosti) eivät saa sisältää samaa lukua.
         </p>
       </header>

@@ -1,5 +1,5 @@
 import type { Level, LevelJson } from './types'
-import { flatIndex, neighborCoords } from './grid'
+import { flatIndex, gridDigitCap, neighborCoords } from './grid'
 
 function assertDimensions(
   width: number,
@@ -43,8 +43,15 @@ export function parseLevel(raw: LevelJson): Level {
   }
 
   const regionSize = new Map<number, number>()
+  const cap = gridDigitCap(width, height)
   for (const [rid, cells] of regionCells) {
-    regionSize.set(rid, cells.length)
+    const sz = cells.length
+    if (sz > cap) {
+      throw new Error(
+        `Region ${rid} has ${sz} cells but ${width}×${height} grid allows at most ${cap} (digits 1…${cap})`,
+      )
+    }
+    regionSize.set(rid, sz)
   }
 
   const cellRegion: number[] = new Array(width * height)
@@ -127,10 +134,12 @@ function validateGivens(level: Level): void {
       const v = values[r][c]
       if (v === null) continue
       const rid = level.cellRegion[flatIndex(r, c, width)]
-      const max = regionSize.get(rid) ?? 0
+      const regionMax = regionSize.get(rid) ?? 0
+      const cap = gridDigitCap(width, height)
+      const max = Math.min(regionMax, cap)
       if (v < 1 || v > max) {
         throw new Error(
-          `Given at (${r},${c}) is ${v} but region max digit is ${max}`,
+          `Given at (${r},${c}) is ${v} but max digit here is ${max} (region size ${regionMax}, grid cap ${cap})`,
         )
       }
     }

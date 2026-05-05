@@ -2,6 +2,11 @@
 const DR = [-1, -1, -1, 0, 0, 1, 1, 1] as const
 const DC = [-1, 0, 1, -1, 1, -1, 0, 1] as const
 
+/** Suurin luku millä tahansa solulla (ei voi ylittää ruudukon lyhyempää sivua). */
+export function gridDigitCap(width: number, height: number): number {
+  return Math.min(width, height)
+}
+
 export function flatIndex(row: number, col: number, width: number): number {
   return row * width + col
 }

@@ -18,7 +18,7 @@ export function regionSizeHistogram(regions: number[][]): Map<number, number> {
 
 /**
  * 8×8 ja 9×9: tasan yksi 1-soluinen, kaksi 2-soluista, kolme 3-soluista aluetta;
- * muut alueet kooltaan 4…9.
+ * muut alueet kooltaan 4…N (N = ruudukon sivun pituus).
  */
 export function is8899SmallRegionLayout(
   height: number,
@@ -26,12 +26,13 @@ export function is8899SmallRegionLayout(
   regions: number[][],
 ): boolean {
   if (height !== width || (height !== 8 && height !== 9)) return true
+  const cap = Math.min(height, width)
   const hist = regionSizeHistogram(regions)
   if ((hist.get(1) ?? 0) !== 1) return false
   if ((hist.get(2) ?? 0) !== 2) return false
   if ((hist.get(3) ?? 0) !== 3) return false
   for (const [size, n] of hist) {
-    if (size < 1 || size > 9 || n < 1) return false
+    if (size < 1 || size > cap || n < 1) return false
     if (size <= 3) continue
   }
   return true
