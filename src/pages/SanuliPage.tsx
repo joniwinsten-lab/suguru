@@ -82,7 +82,7 @@ function loadPersisted(dayKey: string, slotCount: number): Persisted | null {
         draft: typeof z.draft === 'string' ? z.draft.slice(0, COLS) : '',
       })
     }
-    return { dayKey: o.dayKey, slots }
+    return { dayKey: o.dayKey, slotCount, slots }
   } catch {
     return null
   }
