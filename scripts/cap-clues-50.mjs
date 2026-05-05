@@ -8,7 +8,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
 const poolsDir = join(root, 'public', 'pools')
 
-const TIER_IDS = ['beginner-4a', 'easy-6', 'hard-7', 'pro-8', 'legend-9']
+const DEFAULT_TIERS = ['beginner-4a', 'easy-6', 'hard-7', 'pro-8', 'legend-9']
+const TIER_IDS = process.env.TIERS
+  ? process.env.TIERS.split(',').map((x) => x.trim()).filter(Boolean)
+  : DEFAULT_TIERS
+const MIN_RATIO = Number(process.env.MIN_RATIO || '0.3')
+const MAX_RATIO = Number(process.env.MAX_RATIO || '0.5')
 
 function cloneGrid(grid) {
   return grid.map((row) => [...row])
@@ -112,7 +117,9 @@ function rebalanceLevelGivens(level, minRatio, maxRatio) {
 
   cells = listGivenCells(givens)
   if (cells.length < minCount || cells.length > maxCount) {
-    throw new Error(`Unable to keep clue ratio 30-50% for ${level.id}`)
+    throw new Error(
+      `Unable to keep clue ratio ${(MIN_RATIO * 100).toFixed(0)}-${(MAX_RATIO * 100).toFixed(0)}% for ${level.id}`,
+    )
   }
   if (!canKeepPuzzle(level.regions, givens)) {
     throw new Error(`Unique/no-guess check failed for ${level.id}`)
@@ -125,10 +132,12 @@ for (const tierId of TIER_IDS) {
   const path = join(poolsDir, `${tierId}.json`)
   const pack = JSON.parse(readFileSync(path, 'utf8'))
   for (const level of pack.levels) {
-    level.givens = rebalanceLevelGivens(level, 0.3, 0.5)
+    level.givens = rebalanceLevelGivens(level, MIN_RATIO, MAX_RATIO)
   }
   writeFileSync(path, JSON.stringify(pack), 'utf8')
-  console.error(`rebalanced clues: ${tierId}`)
+  console.error(
+    `rebalanced clues: ${tierId} (${(MIN_RATIO * 100).toFixed(0)}-${(MAX_RATIO * 100).toFixed(0)}%)`,
+  )
 }
 
 console.error('done')

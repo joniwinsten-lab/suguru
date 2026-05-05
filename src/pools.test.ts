@@ -19,7 +19,7 @@ const CLUE_RATIO_BOUNDS: Record<string, { min: number; max: number }> = {
   'easy-6': { min: 0.3, max: 0.5 },
   'hard-7': { min: 0.3, max: 0.5 },
   'pro-8': { min: 0.3, max: 0.5 },
-  'legend-9': { min: 0.3, max: 0.5 },
+  'legend-9': { min: 0.25, max: 0.4 },
 }
 
 function assertGivensFraction(level: Level, tierId: string): void {

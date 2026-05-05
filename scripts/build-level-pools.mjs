@@ -36,7 +36,7 @@ function clueFractionBoundsForTier(tierId) {
   if (tierId === 'easy-6') return { min: 0.3, max: 0.5 }
   if (tierId === 'hard-7') return { min: 0.3, max: 0.5 }
   if (tierId === 'pro-8') return { min: 0.3, max: 0.5 }
-  if (tierId === 'legend-9') return { min: 0.3, max: 0.5 }
+  if (tierId === 'legend-9') return { min: 0.25, max: 0.4 }
   return { min: 0.3, max: 0.5 }
 }
 
