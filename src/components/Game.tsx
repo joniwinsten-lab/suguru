@@ -18,6 +18,7 @@ type GameProps = {
   tierTitle: string
   levelIndex: number
   poolCount: number
+  onSolved?: () => void
 }
 
 export function Game({
@@ -26,6 +27,7 @@ export function Game({
   tierTitle,
   levelIndex,
   poolCount,
+  onSolved,
 }: GameProps) {
   const [state, dispatch] = useReducer(
     gameReducer,
@@ -66,7 +68,8 @@ export function Game({
     const ms = Date.now() - runStartMsRef.current
     const rec = saveSolveRecord(tierId, levelIndex, ms)
     setStoredStats(rec)
-  }, [solved, tierId, levelIndex])
+    onSolved?.()
+  }, [solved, tierId, levelIndex, onSolved])
 
   useEffect(() => {
     lastRecordedKey.current = null

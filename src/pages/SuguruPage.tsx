@@ -3,12 +3,15 @@ import { Game } from '../components/Game'
 import { loadPool, type PoolPack } from '../poolApi'
 import { parseLevel } from '../game/level'
 import { POOL_TIERS, type PoolTierId } from '../tiers'
+import { formatElapsed, loadSolveRecord } from '../solveStats'
 
 export function SuguruPage() {
   const [tierId, setTierId] = useState<PoolTierId>(POOL_TIERS[0].id)
   const [levelIndex, setLevelIndex] = useState(0)
   const [pool, setPool] = useState<PoolPack | null>(null)
   const [poolError, setPoolError] = useState<string | null>(null)
+  const [resultsOpen, setResultsOpen] = useState(false)
+  const [resultsTick, setResultsTick] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -49,6 +52,14 @@ export function SuguruPage() {
   const levelNum = levelIndex + 1
   const canGoPrev = !!poolForTier && levelIndex > 0
   const canGoNext = !!poolForTier && levelIndex < poolForTier.count - 1
+  const tierResults = useMemo(() => {
+    if (!poolForTier) return []
+    return poolForTier.levels.map((_, i) => {
+      const rec = loadSolveRecord(tierId, i)
+      return { index: i, rec }
+    })
+  }, [poolForTier, tierId, resultsTick])
+  const solvedCount = tierResults.filter((r) => r.rec).length
 
   return (
     <div className="app">
@@ -122,7 +133,49 @@ export function SuguruPage() {
             Seuraava kenttä
           </button>
         </div>
+
+        <div className="field-nav" role="group" aria-label="Tulokset">
+          <button
+            type="button"
+            onClick={() => setResultsOpen((v) => !v)}
+            disabled={!poolForTier}
+          >
+            {resultsOpen ? 'Piilota tulokset' : 'Tulokset'}
+          </button>
+        </div>
       </div>
+
+      {resultsOpen && poolForTier ? (
+        <section className="results-panel" aria-label="Tulokset">
+          <p className="results-panel__meta">
+            Läpäisty {solvedCount}/{poolForTier.count}
+          </p>
+          <div className="results-table-wrap">
+            <table className="results-table">
+              <thead>
+                <tr>
+                  <th>Kenttä</th>
+                  <th>Tila</th>
+                  <th>Paras</th>
+                  <th>Viimeisin</th>
+                  <th>Kerrat</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tierResults.map(({ index, rec }) => (
+                  <tr key={index}>
+                    <td>{index + 1}</td>
+                    <td>{rec ? 'Läpäisty' : '—'}</td>
+                    <td>{rec ? formatElapsed(rec.bestMs) : '—'}</td>
+                    <td>{rec ? formatElapsed(rec.lastMs) : '—'}</td>
+                    <td>{rec ? rec.solveCount : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
 
       {poolError ? (
         <p className="app-error" role="alert">
@@ -142,6 +195,7 @@ export function SuguruPage() {
           tierTitle={tierTitle}
           levelIndex={levelIndex}
           poolCount={poolForTier.count}
+          onSolved={() => setResultsTick((n) => n + 1)}
         />
       ) : null}
 

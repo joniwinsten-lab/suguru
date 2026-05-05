@@ -148,6 +148,48 @@
   font-weight: 600;
 }
 
+.results-panel {
+  margin-bottom: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 0.75rem;
+}
+
+.results-panel__meta {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.results-table-wrap {
+  overflow-x: auto;
+}
+
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.results-table th,
+.results-table td {
+  text-align: left;
+  padding: 0.4rem 0.35rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.results-table thead th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.results-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
 .game-meta {
   margin: 0;
   font-size: 0.88rem;
@@ -397,6 +439,14 @@
     flex: 1 1 0;
     min-height: 2.85rem;
     font-size: 0.95rem;
+  }
+
+  .results-panel {
+    padding: 0.6rem;
+  }
+
+  .results-table {
+    font-size: 0.84rem;
   }
 
   .board,
