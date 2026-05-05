@@ -14,20 +14,28 @@ function readPool(name: string): PoolPack {
   return JSON.parse(raw) as PoolPack
 }
 
-const GIVEN_FRACTION = 0.25
+const CLUE_RATIO_BOUNDS: Record<string, { min: number; max: number }> = {
+  'beginner-4a': { min: 0.2, max: 0.75 },
+  'easy-6': { min: 0.26, max: 0.75 },
+  'hard-7': { min: 0.24, max: 0.75 },
+  'pro-8': { min: 0.22, max: 0.75 },
+  'legend-9': { min: 0.2, max: 0.75 },
+}
 
-/** Vastaa build-level-pools.mjs: ~25 % soluista vihjeenä, vähintään 1. */
-function assertGivensFraction(level: Level): void {
+function assertGivensFraction(level: Level, tierId: string): void {
   const { height, width, givens } = level
   const total = height * width
-  const expected = Math.min(total, Math.max(1, Math.round(total * GIVEN_FRACTION)))
+  const bounds = CLUE_RATIO_BOUNDS[tierId]
+  const minExpected = Math.min(total, Math.max(1, Math.round(total * bounds.min)))
+  const maxExpected = Math.min(total, Math.max(1, Math.round(total * bounds.max)))
   let n = 0
   for (let r = 0; r < height; r++) {
     for (let c = 0; c < width; c++) {
       if (givens[r][c] !== null) n++
     }
   }
-  expect(n).toBe(expected)
+  expect(n).toBeGreaterThanOrEqual(minExpected)
+  expect(n).toBeLessThanOrEqual(maxExpected)
   const cap = Math.min(width, height)
   if (cap >= 6) {
     expect(new Set(level.regionSize.values()).size).toBeGreaterThanOrEqual(2)
@@ -49,11 +57,14 @@ describe('pools', () => {
     }
   })
 
-  it('beginner pool levels have 25% givens (≥6×6: erikokoiset alueet)', () => {
-    const pack = readPool('beginner-4a')
-    for (let i = 0; i < pack.count; i++) {
-      const level = parseLevel(pack.levels[i])
-      assertGivensFraction(level)
+  it('all tiers keep clue ratio bounds and valid region diversity', () => {
+    const tiers = Object.keys(CLUE_RATIO_BOUNDS)
+    for (const tierId of tiers) {
+      const pack = readPool(tierId)
+      for (let i = 0; i < pack.count; i++) {
+        const level = parseLevel(pack.levels[i])
+        assertGivensFraction(level, tierId)
+      }
     }
   })
 

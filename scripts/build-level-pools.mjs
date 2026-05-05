@@ -31,13 +31,13 @@ const outDir = join(root, 'public', 'pools')
 
 const POOL_COUNT = parseInt(process.env.POOL_COUNT || '50', 10)
 
-function givenFractionForTier(tierId) {
-  if (tierId === 'beginner-4a') return 0.22
-  if (tierId === 'easy-6') return 0.2
-  if (tierId === 'hard-7') return 0.34
-  if (tierId === 'pro-8') return 0.38
-  if (tierId === 'legend-9') return 0.4
-  return 0.25
+function clueFractionBoundsForTier(tierId) {
+  if (tierId === 'beginner-4a') return { min: 0.2, max: 0.35 }
+  if (tierId === 'easy-6') return { min: 0.26, max: 0.5 }
+  if (tierId === 'hard-7') return { min: 0.24, max: 0.46 }
+  if (tierId === 'pro-8') return { min: 0.22, max: 0.42 }
+  if (tierId === 'legend-9') return { min: 0.2, max: 0.38 }
+  return { min: 0.2, max: 0.35 }
 }
 
 function mulberry32(seed) {
@@ -265,22 +265,28 @@ function solutionFor(regions) {
  * 1) yksikäsitteinen (vain 1 ratkaisu)
  * 2) ratkaistavissa ilman arvausta (naked/hidden singles alueissa).
  */
-function findDeterministicUniqueGivens(regions, solution, tierId, levelIndex, fraction) {
-  const tries = tierId === 'legend-9' ? 900 : tierId === 'pro-8' ? 700 : 500
+function findDeterministicUniqueGivens(regions, solution, tierId, levelIndex, minFraction, maxFraction) {
+  const tries = tierId === 'legend-9' ? 260 : tierId === 'pro-8' ? 240 : 220
   const start = hashSeed(tierId, levelIndex * 1543 + 97)
   const fractions = []
-  for (let f = fraction; f <= 0.75; f += 0.05) fractions.push(Number(f.toFixed(2)))
+  for (let f = minFraction; f <= maxFraction; f += 0.02) {
+    fractions.push(Number(f.toFixed(2)))
+  }
+  // Turvaverkko: jos tier-tavoite ei onnistu, laajenna vihjealuetta ylöspäin.
+  for (let f = maxFraction + 0.02; f <= 0.75; f += 0.02) {
+    fractions.push(Number(f.toFixed(2)))
+  }
   for (const frac of fractions) {
     for (let t = 0; t < tries; t++) {
       const seed = (start ^ Math.imul(t + 1, 0x9e3779b1)) >>> 0
       const givens = givensFractionRandomSeeded(regions, solution, seed, frac)
-      const count = countSolutionsFromPuzzle(regions, givens, {
-        maxSolutions: 2,
-        maxNodes: 2_000_000,
-      })
-      if (count !== 1) continue
       const noGuess = solveNoGuessFromPuzzle(regions, givens)
       if (!noGuess) continue
+      const count = countSolutionsFromPuzzle(regions, givens, {
+        maxSolutions: 2,
+        maxNodes: 4_000_000,
+      })
+      if (count !== 1) continue
       return givens
     }
   }
@@ -290,7 +296,7 @@ function findDeterministicUniqueGivens(regions, solution, tierId, levelIndex, fr
 function buildTier(tier) {
   const levels = []
   const { id, title, h, w } = tier
-  const givenFraction = givenFractionForTier(id)
+  const clueBounds = clueFractionBoundsForTier(id)
 
   const layoutWant = Math.min(10, POOL_COUNT)
   const layoutMaxTries = id === 'legend-9' ? 4500 : 2200
@@ -313,7 +319,8 @@ function buildTier(tier) {
       sol,
       id,
       i,
-      givenFraction,
+      clueBounds.min,
+      clueBounds.max,
     )
     if (!givens) {
       throw new Error(

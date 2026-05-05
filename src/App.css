@@ -162,6 +162,30 @@
   color: var(--muted);
 }
 
+.results-controls {
+  display: flex;
+  gap: 0.45rem;
+  margin-bottom: 0.55rem;
+}
+
+.results-controls button,
+.results-pagination button {
+  min-height: 2.2rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.results-controls button.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .results-table-wrap {
   overflow-x: auto;
 }
@@ -188,6 +212,21 @@
 
 .results-table tbody tr:last-child td {
   border-bottom: 0;
+}
+
+.results-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.55rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.results-pagination button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .game-meta {
@@ -447,6 +486,21 @@
 
   .results-table {
     font-size: 0.84rem;
+  }
+
+  .results-controls {
+    flex-wrap: wrap;
+  }
+
+  .results-controls button {
+    flex: 1 1 30%;
+    min-height: 2.45rem;
+    font-size: 0.9rem;
+  }
+
+  .results-pagination button {
+    min-height: 2.45rem;
+    font-size: 0.9rem;
   }
 
   .board,

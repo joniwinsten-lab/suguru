@@ -12,6 +12,8 @@ export function SuguruPage() {
   const [poolError, setPoolError] = useState<string | null>(null)
   const [resultsOpen, setResultsOpen] = useState(false)
   const [resultsTick, setResultsTick] = useState(0)
+  const [resultsFilter, setResultsFilter] = useState<'all' | 'solved' | 'unsolved'>('all')
+  const [resultsPage, setResultsPage] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -60,6 +62,22 @@ export function SuguruPage() {
     })
   }, [poolForTier, tierId, resultsTick])
   const solvedCount = tierResults.filter((r) => r.rec).length
+  const filteredResults = useMemo(() => {
+    if (resultsFilter === 'solved') return tierResults.filter((r) => !!r.rec)
+    if (resultsFilter === 'unsolved') return tierResults.filter((r) => !r.rec)
+    return tierResults
+  }, [tierResults, resultsFilter])
+  const RESULTS_PAGE_SIZE = 10
+  const resultsPageCount = Math.max(1, Math.ceil(filteredResults.length / RESULTS_PAGE_SIZE))
+  const clampedPage = Math.min(resultsPage, resultsPageCount - 1)
+  const visibleResults = filteredResults.slice(
+    clampedPage * RESULTS_PAGE_SIZE,
+    clampedPage * RESULTS_PAGE_SIZE + RESULTS_PAGE_SIZE,
+  )
+
+  useEffect(() => {
+    setResultsPage(0)
+  }, [resultsFilter, tierId, resultsOpen])
 
   return (
     <div className="app">
@@ -150,6 +168,29 @@ export function SuguruPage() {
           <p className="results-panel__meta">
             Läpäisty {solvedCount}/{poolForTier.count}
           </p>
+          <div className="results-controls" role="group" aria-label="Tulosten suodatus">
+            <button
+              type="button"
+              className={resultsFilter === 'all' ? 'is-active' : ''}
+              onClick={() => setResultsFilter('all')}
+            >
+              Kaikki
+            </button>
+            <button
+              type="button"
+              className={resultsFilter === 'solved' ? 'is-active' : ''}
+              onClick={() => setResultsFilter('solved')}
+            >
+              Läpäistyt
+            </button>
+            <button
+              type="button"
+              className={resultsFilter === 'unsolved' ? 'is-active' : ''}
+              onClick={() => setResultsFilter('unsolved')}
+            >
+              Kesken
+            </button>
+          </div>
           <div className="results-table-wrap">
             <table className="results-table">
               <thead>
@@ -162,7 +203,7 @@ export function SuguruPage() {
                 </tr>
               </thead>
               <tbody>
-                {tierResults.map(({ index, rec }) => (
+                {visibleResults.map(({ index, rec }) => (
                   <tr key={index}>
                     <td>{index + 1}</td>
                     <td>{rec ? 'Läpäisty' : '—'}</td>
@@ -173,6 +214,27 @@ export function SuguruPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="results-pagination" role="group" aria-label="Tulosten sivutus">
+            <button
+              type="button"
+              disabled={clampedPage <= 0}
+              onClick={() => setResultsPage((p) => Math.max(0, p - 1))}
+            >
+              Edellinen sivu
+            </button>
+            <span>
+              Sivu {clampedPage + 1}/{resultsPageCount}
+            </span>
+            <button
+              type="button"
+              disabled={clampedPage >= resultsPageCount - 1}
+              onClick={() =>
+                setResultsPage((p) => Math.min(resultsPageCount - 1, p + 1))
+              }
+            >
+              Seuraava sivu
+            </button>
           </div>
         </section>
       ) : null}
