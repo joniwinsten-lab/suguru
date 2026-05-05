@@ -195,7 +195,6 @@ function collectRegionLayouts(tierId, H, W, want, maxTries, seedSalt) {
       preferred.push(regions.map((row) => [...row]))
       if (preferred.length >= want) return preferred.slice(0, want)
     }
-    if (preferred.length > 0) return preferred
   }
 
   if (H === 4 && W === 4) {
@@ -244,6 +243,7 @@ function collectRegionLayouts(tierId, H, W, want, maxTries, seedSalt) {
     }
   }
 
+  if (guidedSquare) return preferred.slice(0, want)
   const out = [...preferred, ...other]
   return out.slice(0, want)
 }
@@ -273,7 +273,8 @@ function findDeterministicUniqueGivens(regions, solution, tierId, levelIndex, mi
     fractions.push(Number(f.toFixed(2)))
   }
   // Turvaverkko: jos tier-tavoite ei onnistu, laajenna vihjealuetta ylöspäin.
-  for (let f = maxFraction + 0.02; f <= 0.75; f += 0.02) {
+  const hardCap = 0.5
+  for (let f = maxFraction + 0.02; f <= hardCap; f += 0.02) {
     fractions.push(Number(f.toFixed(2)))
   }
   for (const frac of fractions) {
@@ -310,19 +311,29 @@ function buildTier(tier) {
   }
 
   for (let i = 0; i < POOL_COUNT; i++) {
-    const regions = layoutBank[i % layoutBank.length].map((row) => [...row])
-    const sol = solutionFor(regions)
-    if (!sol) throw new Error(`unsolvable ${id}`)
-
-    const givens = findDeterministicUniqueGivens(
-      regions,
-      sol,
-      id,
-      i,
-      clueBounds.min,
-      clueBounds.max,
-    )
-    if (!givens) {
+    let pickedRegions = null
+    let givens = null
+    for (let j = 0; j < layoutBank.length; j++) {
+      const regions = layoutBank[(i + j) % layoutBank.length].map((row) => [...row])
+      const sol = solutionFor(regions)
+      if (!sol) continue
+      let candidate = null
+      for (let seedVariant = 0; seedVariant < 12 && !candidate; seedVariant++) {
+        candidate = findDeterministicUniqueGivens(
+          regions,
+          sol,
+          id,
+          i * 100 + j + seedVariant * 10_000,
+          clueBounds.min,
+          clueBounds.max,
+        )
+      }
+      if (!candidate) continue
+      pickedRegions = regions
+      givens = candidate
+      break
+    }
+    if (!pickedRegions || !givens) {
       throw new Error(
         `failed to build deterministic+unique givens for ${id}-${String(i).padStart(3, '0')}`,
       )
@@ -333,7 +344,7 @@ function buildTier(tier) {
       title,
       width: w,
       height: h,
-      regions,
+      regions: pickedRegions,
       givens,
     })
   }
