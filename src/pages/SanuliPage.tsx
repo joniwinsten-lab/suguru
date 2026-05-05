@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { dayKeyUtc, pickDailyIndex } from '../sanuli/dailyWord'
+import {
+  DAILY_WORD_SLOTS,
+  dayKeyUtc,
+  pickDailyWordIndices,
+} from '../sanuli/dailyWord'
 import { loadFiWords } from '../sanuli/loadWords'
 import {
   isValidFiLetter,
@@ -11,17 +15,22 @@ import './SanuliPage.css'
 
 const ROWS = 6
 const COLS = 5
-const STORAGE_KEY = 'sanuli-state-v1'
+const STORAGE_KEY = 'sanuli-state-v2'
 
-type GameStatus = 'playing' | 'won' | 'lost'
+type SlotStatus = 'locked' | 'playing' | 'won' | 'lost'
 
 type CommittedRow = { word: string; scores: TileState[] }
 
-type Persisted = {
-  dayKey: string
+type SlotPersisted = {
+  status: SlotStatus
   committed: string[]
   draft: string
-  status: GameStatus
+}
+
+type Persisted = {
+  dayKey: string
+  slotCount: number
+  slots: SlotPersisted[]
 }
 
 function parseDayKey(dayKey: string): { d: number; m: number; y: number } | null {
@@ -36,19 +45,44 @@ function dayKeyToFiLabel(dayKey: string): string {
   return `${p.d}.${p.m}.${p.y}`
 }
 
-function loadPersisted(dayKey: string): Persisted | null {
+function emptySlots(count: number): SlotPersisted[] {
+  const s: SlotPersisted[] = []
+  const n = Math.max(0, Math.min(count, DAILY_WORD_SLOTS))
+  for (let i = 0; i < n; i++) {
+    s.push({
+      status: i === 0 ? 'playing' : 'locked',
+      committed: [],
+      draft: '',
+    })
+  }
+  return s
+}
+
+function loadPersisted(dayKey: string, slotCount: number): Persisted | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
     const o = JSON.parse(raw) as Persisted
-    if (o?.dayKey !== dayKey || !Array.isArray(o.committed)) return null
-    if (o.status !== 'playing' && o.status !== 'won' && o.status !== 'lost') return null
-    return {
-      dayKey: o.dayKey,
-      committed: o.committed.filter((w) => typeof w === 'string' && w.length === COLS),
-      draft: typeof o.draft === 'string' ? o.draft.slice(0, COLS) : '',
-      status: o.status,
+    if (o?.dayKey !== dayKey || !Array.isArray(o.slots)) return null
+    const expected =
+      typeof o.slotCount === 'number' ? o.slotCount : DAILY_WORD_SLOTS
+    if (expected !== slotCount || o.slots.length !== slotCount) return null
+    const slots: SlotPersisted[] = []
+    for (let i = 0; i < slotCount; i++) {
+      const z = o.slots[i]
+      if (!z || typeof z !== 'object') return null
+      const st = z.status
+      if (st !== 'locked' && st !== 'playing' && st !== 'won' && st !== 'lost')
+        return null
+      slots.push({
+        status: st,
+        committed: Array.isArray(z.committed)
+          ? z.committed.filter((w) => typeof w === 'string' && w.length === COLS)
+          : [],
+        draft: typeof z.draft === 'string' ? z.draft.slice(0, COLS) : '',
+      })
     }
+    return { dayKey: o.dayKey, slots }
   } catch {
     return null
   }
@@ -93,9 +127,10 @@ export function SanuliPage() {
   const dayKey = useMemo(() => dayKeyUtc(), [])
   const [pack, setPack] = useState<Awaited<ReturnType<typeof loadFiWords>> | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [committed, setCommitted] = useState<CommittedRow[]>([])
-  const [draft, setDraft] = useState('')
-  const [status, setStatus] = useState<GameStatus>('playing')
+  const [indices, setIndices] = useState<number[]>([])
+  const [slotsPersist, setSlotsPersist] = useState<SlotPersisted[]>([])
+  const [hydrated, setHydrated] = useState(false)
+  const hydrateOnce = useRef(false)
   const [shakeRow, setShakeRow] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const toastTimer = useRef<number | null>(null)
@@ -105,11 +140,37 @@ export function SanuliPage() {
     return new Set(pack.allowed)
   }, [pack])
 
-  const solution = useMemo(() => {
-    if (!pack?.solutions.length) return ''
-    const i = pickDailyIndex(dayKey, pack.solutions.length)
-    return pack.solutions[i] ?? ''
-  }, [pack, dayKey])
+  const solutionsFive = useMemo(() => {
+    if (!pack?.solutions.length || indices.length === 0) return []
+    return indices.map((i) => pack.solutions[i] ?? '')
+  }, [pack, indices])
+
+  const slotCount = indices.length
+
+  const activeSlot = useMemo(() => {
+    if (slotsPersist.length === 0) return 0
+    const i = slotsPersist.findIndex((s) => s.status === 'playing' || s.status === 'lost')
+    return i >= 0 ? i : slotsPersist.length - 1
+  }, [slotsPersist])
+
+  const solution = solutionsFive[activeSlot] ?? ''
+  const slotState = slotsPersist[activeSlot]
+
+  const committed = useMemo((): CommittedRow[] => {
+    if (!allowedSet || !solution || !slotState) return []
+    const rows: CommittedRow[] = []
+    for (const w of slotState.committed) {
+      if (w.length !== COLS || !allowedSet.has(w)) continue
+      rows.push({ word: w, scores: scoreGuess(solution, w) })
+    }
+    return rows
+  }, [allowedSet, solution, slotState])
+
+  const draft = slotState?.draft ?? ''
+  const playing = slotState?.status === 'playing'
+  const lost = slotState?.status === 'lost'
+  const wonCount = slotsPersist.filter((s) => s.status === 'won').length
+  const allDone = slotCount > 0 && wonCount >= slotCount
 
   useEffect(() => {
     let cancelled = false
@@ -118,18 +179,8 @@ export function SanuliPage() {
         if (cancelled) return
         setPack(p)
         setLoadError(null)
-        const sol = p.solutions[pickDailyIndex(dayKey, p.solutions.length)] ?? ''
-        const allowed = new Set(p.allowed)
-        const saved = loadPersisted(dayKey)
-        if (!saved || !sol) return
-        const rows: CommittedRow[] = []
-        for (const w of saved.committed) {
-          if (w.length !== COLS || !allowed.has(w)) continue
-          rows.push({ word: w, scores: scoreGuess(sol, w) })
-        }
-        setCommitted(rows)
-        setDraft(saved.status === 'playing' ? saved.draft.slice(0, COLS) : '')
-        setStatus(saved.status)
+        const idx = pickDailyWordIndices(dayKey, p.solutions.length)
+        setIndices(idx)
       })
       .catch((e: unknown) => {
         if (!cancelled)
@@ -141,14 +192,18 @@ export function SanuliPage() {
   }, [dayKey])
 
   useEffect(() => {
-    if (!solution) return
-    savePersisted({
-      dayKey,
-      committed: committed.map((r) => r.word),
-      draft: status === 'playing' ? draft : '',
-      status,
-    })
-  }, [dayKey, solution, committed, draft, status])
+    if (!pack || indices.length === 0 || hydrateOnce.current) return
+    hydrateOnce.current = true
+    const n = indices.length
+    const saved = loadPersisted(dayKey, n)
+    setSlotsPersist(saved?.slots ?? emptySlots(n))
+    setHydrated(true)
+  }, [pack, dayKey, indices])
+
+  useEffect(() => {
+    if (!hydrated || !pack || indices.length === 0) return
+    savePersisted({ dayKey, slotCount: indices.length, slots: slotsPersist })
+  }, [hydrated, dayKey, pack, indices.length, slotsPersist])
 
   const showToast = useCallback((msg: string) => {
     setToast(msg)
@@ -156,14 +211,14 @@ export function SanuliPage() {
     toastTimer.current = window.setTimeout(() => {
       setToast(null)
       toastTimer.current = null
-    }, 2000)
+    }, 2400)
   }, [])
 
   const currentRowIndex = committed.length
-  const gameOver = status !== 'playing'
+  const keyboardDisabled = !playing || allDone || currentRowIndex >= ROWS
 
   const submitRow = useCallback(() => {
-    if (gameOver || !solution || !allowedSet) return
+    if (!playing || !solution || !allowedSet || allDone) return
     const guess = normalizeFi(draft)
     if (guess.length !== COLS) return
     if (!allowedSet.has(guess)) {
@@ -172,21 +227,87 @@ export function SanuliPage() {
       showToast('Ei sanalistalla')
       return
     }
+
     const scores = scoreGuess(solution, guess)
-    const next = [...committed, { word: guess, scores }]
-    setCommitted(next)
-    setDraft('')
     const win = scores.every((t) => t === 'correct')
-    if (win) setStatus('won')
-    else if (next.length >= ROWS) setStatus('lost')
-  }, [committed, draft, gameOver, solution, allowedSet, showToast])
+    const triesAfter = slotState!.committed.length + 1
+    const lose = !win && triesAfter >= ROWS
+
+    setSlotsPersist((prev) => {
+      const next = prev.map((s) => ({ ...s }))
+      const ai = prev.findIndex((s) => s.status === 'playing')
+      if (ai < 0) return prev
+
+      const nextWords = [...prev[ai].committed, guess]
+
+      if (win) {
+        next[ai] = { status: 'won', committed: nextWords, draft: '' }
+        if (ai + 1 < next.length) {
+          next[ai + 1] = {
+            ...next[ai + 1],
+            status: 'playing',
+            committed: [],
+            draft: '',
+          }
+        }
+      } else if (lose) {
+        next[ai] = {
+          ...next[ai],
+          status: 'lost',
+          committed: nextWords,
+          draft: '',
+        }
+      } else {
+        next[ai] = {
+          ...next[ai],
+          status: 'playing',
+          committed: nextWords,
+          draft: '',
+        }
+      }
+      return next
+    })
+
+    if (win) {
+      const prevWon = slotsPersist.filter((s) => s.status === 'won').length
+      const total = slotsPersist.length
+      if (prevWon + 1 >= total)
+        showToast(`Kaikki päivän ${total} sanaa ratkaistu!`)
+      else showToast('Oikein! Seuraava sana.')
+    }
+  }, [
+    playing,
+    solution,
+    allowedSet,
+    allDone,
+    draft,
+    slotState,
+    slotsPersist,
+    showToast,
+  ])
+
+  const retrySlot = useCallback(() => {
+    setSlotsPersist((prev) => {
+      const next = prev.map((s) => ({ ...s }))
+      const ai = next.findIndex((s) => s.status === 'lost')
+      if (ai < 0) return prev
+      next[ai] = { status: 'playing', committed: [], draft: '' }
+      return next
+    })
+  }, [])
 
   const onKey = useCallback(
     (key: string) => {
-      if (gameOver || currentRowIndex >= ROWS) return
+      if (keyboardDisabled) return
       const k = normalizeFi(key)
       if (k === 'backspace') {
-        setDraft((d) => d.slice(0, -1))
+        setSlotsPersist((prev) => {
+          const next = prev.map((s) => ({ ...s }))
+          const ai = next.findIndex((s) => s.status === 'playing')
+          if (ai < 0) return prev
+          next[ai].draft = next[ai].draft.slice(0, -1)
+          return next
+        })
         return
       }
       if (k === 'enter') {
@@ -194,9 +315,16 @@ export function SanuliPage() {
         return
       }
       if (!isValidFiLetter(k)) return
-      setDraft((d) => (d.length >= COLS ? d : d + k.toLowerCase()))
+      setSlotsPersist((prev) => {
+        const next = prev.map((s) => ({ ...s }))
+        const ai = next.findIndex((s) => s.status === 'playing')
+        if (ai < 0) return prev
+        const d = next[ai].draft
+        if (d.length < COLS) next[ai].draft = d + k.toLowerCase()
+        return next
+      })
     },
-    [gameOver, currentRowIndex, submitRow],
+    [keyboardDisabled, submitRow],
   )
 
   useEffect(() => {
@@ -223,9 +351,9 @@ export function SanuliPage() {
   }, [onKey])
 
   const copyShare = useCallback(async () => {
-    if (!solution || status === 'playing') return
+    if (!solution || !lost) return
     const n = committed.length
-    const header = `Sanuli ${dayKeyToFiLabel(dayKey)} ${n}/${ROWS}`
+    const header = `Sanuli ${dayKeyToFiLabel(dayKey)} · sana ${activeSlot + 1}/${slotCount} · ${n}/${ROWS}`
     const grid = committed.map((r) => shareEmoji(r.scores)).join('\n')
     const text = `${header}\n${grid}`
     try {
@@ -234,7 +362,7 @@ export function SanuliPage() {
     } catch {
       showToast('Kopiointi epäonnistui')
     }
-  }, [solution, status, committed, dayKey, showToast])
+  }, [solution, lost, committed, dayKey, activeSlot, slotCount, showToast])
 
   const letterKeyState = useMemo(() => {
     const m = new Map<string, TileState>()
@@ -261,7 +389,7 @@ export function SanuliPage() {
     )
   }
 
-  if (!pack || !solution) {
+  if (!pack || indices.length === 0 || !solution || !hydrated) {
     return (
       <div className="sanuli app">
         <p className="app-loading">Ladataan…</p>
@@ -274,10 +402,27 @@ export function SanuliPage() {
       <header className="sanuli-header">
         <h1>Sanuli</h1>
         <p className="sanuli-lead">
-          Arvaa suomenkielinen viisikirjaiminen sana kuudella yrityksellä. Uusi sana joka päivä
-          (UTC). Vihreä = oikea paikka, keltainen = väärä paikka, harmaa = ei sanassa.
+          Viisi viisikirjaimista sanaa päivässä (UTC). Kun ratkaiset sanan, saat seuraavan — enintään{' '}
+          {DAILY_WORD_SLOTS} sanaa. Kuusi yritystä per sana. Vihreä / keltainen / harmaa kuten Wordlessä.
         </p>
       </header>
+
+      <div
+        className="sanuli-progress"
+          aria-label={`Päivän sanat: ${wonCount} / ${slotCount}`}
+      >
+        {slotsPersist.map((s, i) => (
+          <span
+            key={i}
+            className={`sanuli-progress__pill${s.status === 'won' ? ' sanuli-progress__pill--won' : ''}${s.status === 'locked' ? ' sanuli-progress__pill--locked' : ''}${i === activeSlot && (s.status === 'playing' || s.status === 'lost') ? ' sanuli-progress__pill--active' : ''}`}
+          >
+            {i + 1}
+          </span>
+        ))}
+        <span className="sanuli-progress__meta">
+          Ratkaistu {wonCount}/{slotCount}
+        </span>
+      </div>
 
       {toast ? (
         <div className="sanuli-toast" role="status">
@@ -285,97 +430,115 @@ export function SanuliPage() {
         </div>
       ) : null}
 
-      <div className="sanuli-board" role="grid" aria-label="Arvausruudukko">
-        {Array.from({ length: ROWS }, (_, ri) => {
-          const rowCommitted = committed[ri]
-          const isCurrent = ri === currentRowIndex && !gameOver
-          const letters = rowCommitted
-            ? [...rowCommitted.word]
-            : isCurrent
-              ? [...draft.padEnd(COLS, ' ')].map((c) => (c === ' ' ? '' : c))
-              : Array(COLS).fill('')
-          const scores = rowCommitted?.scores
-          const shake = shakeRow && isCurrent && draft.length === COLS
-          return (
-            <div
-              key={ri}
-              className={`sanuli-row${shake ? ' sanuli-row--shake' : ''}`}
-              role="row"
-              aria-label={`Rivi ${ri + 1}`}
-            >
-              {letters.map((ch, ci) => {
-                const st = scores?.[ci] ?? (ch ? 'tbd' : 'empty')
-                const display = ch ? ch.toUpperCase() : ''
-                return (
-                  <div
-                    key={ci}
-                    className={tileClass(st)}
-                    role="gridcell"
-                    aria-label={ch ? `${display}, ${st}` : 'tyhjä'}
-                  >
-                    {display}
-                  </div>
-                )
-              })}
-            </div>
-          )
-        })}
-      </div>
-
-      {status === 'won' ? (
-        <p className="sanuli-message sanuli-message--won">Hienoa — arvasit oikein!</p>
-      ) : null}
-      {status === 'lost' ? (
-        <p className="sanuli-message sanuli-message--lost" role="status">
-          Loppu. Oikea sana: <strong>{solution.toUpperCase()}</strong>
+      {allDone ? (
+        <p className="sanuli-message sanuli-message--won" role="status">
+          Loistavaa — kaikki päivän sanat ratkaistu ({slotCount}/{slotCount})! Palaa huomenna uusien sanojen pariin.
         </p>
       ) : null}
 
-      <div className="sanuli-actions">
-        <button type="button" disabled={status === 'playing'} onClick={() => void copyShare()}>
-          Jako
-        </button>
-      </div>
+      {!allDone ? (
+        <>
+          <p className="sanuli-slot-label">
+            Sana <strong>{activeSlot + 1}</strong> / {slotCount}
+          </p>
 
-      <div className="sanuli-keyboard" role="group" aria-label="Näppäimistö">
-        {KEYBOARD_ROWS.map((row, ri) => (
-          <div key={ri} className="sanuli-keyboard__row">
-            {row.map((k) => {
-              const wide = k === 'Enter' || k === 'Backspace'
-              const st = letterKeyState.get(k)
-              const cls = [
-                'sanuli-key',
-                wide ? 'sanuli-key--wide' : '',
-                st === 'correct'
-                  ? 'sanuli-key--correct'
-                  : st === 'present'
-                    ? 'sanuli-key--present'
-                    : st === 'absent'
-                      ? 'sanuli-key--absent'
-                      : '',
-              ]
-                .filter(Boolean)
-                .join(' ')
-              const label = k === 'Backspace' ? '⌫' : k === 'Enter' ? 'ENTER' : k.toUpperCase()
+          <div className="sanuli-board" role="grid" aria-label="Arvausruudukko">
+            {Array.from({ length: ROWS }, (_, ri) => {
+              const rowCommitted = committed[ri]
+              const isCurrent = ri === currentRowIndex && playing
+              const letters = rowCommitted
+                ? [...rowCommitted.word]
+                : isCurrent
+                  ? [...draft.padEnd(COLS, ' ')].map((c) => (c === ' ' ? '' : c))
+                  : Array(COLS).fill('')
+              const scores = rowCommitted?.scores
+              const shake = shakeRow && isCurrent && draft.length === COLS && playing
               return (
-                <button
-                  key={k + ri}
-                  type="button"
-                  className={cls}
-                  disabled={gameOver}
-                  onClick={() => {
-                    if (k === 'Enter') onKey('enter')
-                    else if (k === 'Backspace') onKey('backspace')
-                    else onKey(k)
-                  }}
+                <div
+                  key={ri}
+                  className={`sanuli-row${shake ? ' sanuli-row--shake' : ''}`}
+                  role="row"
+                  aria-label={`Rivi ${ri + 1}`}
                 >
-                  {label}
-                </button>
+                  {letters.map((ch, ci) => {
+                    const st = scores?.[ci] ?? (ch ? 'tbd' : 'empty')
+                    const display = ch ? ch.toUpperCase() : ''
+                    return (
+                      <div
+                        key={ci}
+                        className={tileClass(st)}
+                        role="gridcell"
+                        aria-label={ch ? `${display}, ${st}` : 'tyhjä'}
+                      >
+                        {display}
+                      </div>
+                    )
+                  })}
+                </div>
               )
             })}
           </div>
-        ))}
-      </div>
+
+          {lost ? (
+            <div className="sanuli-after-loss">
+              <p className="sanuli-message sanuli-message--lost" role="status">
+                Yritykset loppuivat. Oikea sana oli{' '}
+                <strong>{solution.toUpperCase()}</strong>. Voit yrittää samaa sanaa uudelleen tai odottaa huomista.
+              </p>
+              <button type="button" className="sanuli-retry" onClick={() => retrySlot()}>
+                Yritä uudelleen
+              </button>
+            </div>
+          ) : null}
+
+          <div className="sanuli-actions">
+            <button type="button" disabled={!lost} onClick={() => void copyShare()}>
+              Jako
+            </button>
+          </div>
+
+          <div className="sanuli-keyboard" role="group" aria-label="Näppäimistö">
+            {KEYBOARD_ROWS.map((row, ri) => (
+              <div key={ri} className="sanuli-keyboard__row">
+                {row.map((k) => {
+                  const wide = k === 'Enter' || k === 'Backspace'
+                  const st = letterKeyState.get(k)
+                  const cls = [
+                    'sanuli-key',
+                    wide ? 'sanuli-key--wide' : '',
+                    st === 'correct'
+                      ? 'sanuli-key--correct'
+                      : st === 'present'
+                        ? 'sanuli-key--present'
+                        : st === 'absent'
+                          ? 'sanuli-key--absent'
+                          : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')
+                  const label =
+                    k === 'Backspace' ? '⌫' : k === 'Enter' ? 'ENTER' : k.toUpperCase()
+                  return (
+                    <button
+                      key={k + ri}
+                      type="button"
+                      className={cls}
+                      disabled={keyboardDisabled}
+                      onClick={() => {
+                        if (k === 'Enter') onKey('enter')
+                        else if (k === 'Backspace') onKey('backspace')
+                        else onKey(k)
+                      }}
+                    >
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        </>
+      ) : null}
     </div>
   )
 }

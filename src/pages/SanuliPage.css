@@ -6,6 +6,77 @@
   --sanuli-tile-text: #1a1a1b;
 }
 
+.sanuli-progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem 0.65rem;
+  margin: 0 0 0.85rem;
+}
+
+.sanuli-progress__pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border: 2px solid var(--sanuli-tile-border);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.sanuli-progress__pill--locked {
+  opacity: 0.45;
+}
+
+.sanuli-progress__pill--active {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.sanuli-progress__pill--won {
+  background: var(--sanuli-correct);
+  border-color: var(--sanuli-correct);
+  color: #fff;
+}
+
+.sanuli-progress__meta {
+  font-size: 0.88rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.sanuli-slot-label {
+  margin: 0 0 0.65rem;
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.sanuli-after-loss {
+  margin: 0.5rem 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.sanuli-retry {
+  padding: 0.45rem 1.1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .sanuli-header h1 {
   margin: 0 0 0.35rem;
   font-size: 1.75rem;
