@@ -28,9 +28,11 @@ const outDir = join(root, 'public', 'pools')
 const POOL_COUNT = parseInt(process.env.POOL_COUNT || '10', 10)
 
 function givenFractionForTier(tierId) {
-  if (tierId === 'hard-7') return 0.45
-  if (tierId === 'pro-8') return 0.48
-  if (tierId === 'legend-9') return 0.5
+  if (tierId === 'beginner-4a') return 0.22
+  if (tierId === 'easy-6') return 0.2
+  if (tierId === 'hard-7') return 0.34
+  if (tierId === 'pro-8') return 0.38
+  if (tierId === 'legend-9') return 0.4
   return 0.25
 }
 
