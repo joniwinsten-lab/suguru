@@ -29,7 +29,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
 const outDir = join(root, 'public', 'pools')
 
-const POOL_COUNT = parseInt(process.env.POOL_COUNT || '10', 10)
+const POOL_COUNT = parseInt(process.env.POOL_COUNT || '50', 10)
 
 function givenFractionForTier(tierId) {
   if (tierId === 'beginner-4a') return 0.22
