@@ -32,12 +32,12 @@ const outDir = join(root, 'public', 'pools')
 const POOL_COUNT = parseInt(process.env.POOL_COUNT || '50', 10)
 
 function clueFractionBoundsForTier(tierId) {
-  if (tierId === 'beginner-4a') return { min: 0.2, max: 0.35 }
-  if (tierId === 'easy-6') return { min: 0.26, max: 0.5 }
-  if (tierId === 'hard-7') return { min: 0.24, max: 0.46 }
-  if (tierId === 'pro-8') return { min: 0.22, max: 0.42 }
-  if (tierId === 'legend-9') return { min: 0.2, max: 0.38 }
-  return { min: 0.2, max: 0.35 }
+  if (tierId === 'beginner-4a') return { min: 0.3, max: 0.5 }
+  if (tierId === 'easy-6') return { min: 0.3, max: 0.5 }
+  if (tierId === 'hard-7') return { min: 0.3, max: 0.5 }
+  if (tierId === 'pro-8') return { min: 0.3, max: 0.5 }
+  if (tierId === 'legend-9') return { min: 0.3, max: 0.5 }
+  return { min: 0.3, max: 0.5 }
 }
 
 function mulberry32(seed) {

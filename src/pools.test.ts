@@ -15,11 +15,11 @@ function readPool(name: string): PoolPack {
 }
 
 const CLUE_RATIO_BOUNDS: Record<string, { min: number; max: number }> = {
-  'beginner-4a': { min: 0.2, max: 0.75 },
-  'easy-6': { min: 0.26, max: 0.75 },
-  'hard-7': { min: 0.24, max: 0.75 },
-  'pro-8': { min: 0.22, max: 0.75 },
-  'legend-9': { min: 0.2, max: 0.75 },
+  'beginner-4a': { min: 0.3, max: 0.5 },
+  'easy-6': { min: 0.3, max: 0.5 },
+  'hard-7': { min: 0.3, max: 0.5 },
+  'pro-8': { min: 0.3, max: 0.5 },
+  'legend-9': { min: 0.3, max: 0.5 },
 }
 
 function assertGivensFraction(level: Level, tierId: string): void {

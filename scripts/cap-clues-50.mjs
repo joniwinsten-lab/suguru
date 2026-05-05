@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { countSolutionsFromPuzzle, solveNoGuessFromPuzzle } from './solver-core.mjs'
+import { countSolutionsFromPuzzle, solveFromRegions, solveNoGuessFromPuzzle } from './solver-core.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
@@ -50,15 +50,34 @@ function canKeepPuzzle(regions, givens) {
   return count === 1
 }
 
-function capLevelGivens(level, ratioCap) {
+function rebalanceLevelGivens(level, minRatio, maxRatio) {
   const total = level.width * level.height
-  const capCount = Math.max(1, Math.floor(total * ratioCap))
+  const minCount = Math.max(1, Math.ceil(total * minRatio))
+  const maxCount = Math.max(minCount, Math.floor(total * maxRatio))
+  const solution = solveFromRegions(level.regions)
+  if (!solution) throw new Error(`Unsolvable layout in ${level.id}`)
+
   let givens = cloneGrid(level.givens)
   let cells = listGivenCells(givens)
-  if (cells.length <= capCount) return givens
-
   const rng = mulberry32(total * 7919 + cells.length * 104729)
-  while (cells.length > capCount) {
+  const target = minCount + Math.floor(rng() * (maxCount - minCount + 1))
+
+  if (cells.length < minCount) {
+    const open = []
+    for (let r = 0; r < level.height; r++) {
+      for (let c = 0; c < level.width; c++) {
+        if (givens[r][c] == null) open.push([r, c])
+      }
+    }
+    shuffleInPlace(open, rng)
+    while (cells.length < minCount && open.length > 0) {
+      const [r, c] = open.pop()
+      givens[r][c] = solution[r][c]
+      cells.push([r, c])
+    }
+  }
+
+  while (cells.length > target) {
     let removed = false
     const candidates = [...cells]
     shuffleInPlace(candidates, rng)
@@ -72,9 +91,33 @@ function capLevelGivens(level, ratioCap) {
       break
     }
     if (!removed) {
-      throw new Error(`Unable to reduce clues to <=50% for ${level.id}`)
+      break
     }
   }
+
+  if (cells.length < target) {
+    const open = []
+    for (let r = 0; r < level.height; r++) {
+      for (let c = 0; c < level.width; c++) {
+        if (givens[r][c] == null) open.push([r, c])
+      }
+    }
+    shuffleInPlace(open, rng)
+    while (cells.length < target && open.length > 0) {
+      const [r, c] = open.pop()
+      givens[r][c] = solution[r][c]
+      cells.push([r, c])
+    }
+  }
+
+  cells = listGivenCells(givens)
+  if (cells.length < minCount || cells.length > maxCount) {
+    throw new Error(`Unable to keep clue ratio 30-50% for ${level.id}`)
+  }
+  if (!canKeepPuzzle(level.regions, givens)) {
+    throw new Error(`Unique/no-guess check failed for ${level.id}`)
+  }
+
   return givens
 }
 
@@ -82,10 +125,10 @@ for (const tierId of TIER_IDS) {
   const path = join(poolsDir, `${tierId}.json`)
   const pack = JSON.parse(readFileSync(path, 'utf8'))
   for (const level of pack.levels) {
-    level.givens = capLevelGivens(level, 0.5)
+    level.givens = rebalanceLevelGivens(level, 0.3, 0.5)
   }
   writeFileSync(path, JSON.stringify(pack), 'utf8')
-  console.error(`capped clues: ${tierId}`)
+  console.error(`rebalanced clues: ${tierId}`)
 }
 
 console.error('done')
