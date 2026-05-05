@@ -14,7 +14,11 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { solveFromRegions } from './solver-core.mjs'
+import {
+  countSolutionsFromPuzzle,
+  solveFromRegions,
+  solveNoGuessFromPuzzle,
+} from './solver-core.mjs'
 import {
   growGuidedSmallRegionPartition,
   growVariablePartitionAny,
@@ -256,6 +260,33 @@ function solutionFor(regions) {
   return sol.map((row) => [...row])
 }
 
+/**
+ * Etsi vihjeasettelu, joka on:
+ * 1) yksikäsitteinen (vain 1 ratkaisu)
+ * 2) ratkaistavissa ilman arvausta (naked/hidden singles alueissa).
+ */
+function findDeterministicUniqueGivens(regions, solution, tierId, levelIndex, fraction) {
+  const tries = tierId === 'legend-9' ? 900 : tierId === 'pro-8' ? 700 : 500
+  const start = hashSeed(tierId, levelIndex * 1543 + 97)
+  const fractions = []
+  for (let f = fraction; f <= 0.75; f += 0.05) fractions.push(Number(f.toFixed(2)))
+  for (const frac of fractions) {
+    for (let t = 0; t < tries; t++) {
+      const seed = (start ^ Math.imul(t + 1, 0x9e3779b1)) >>> 0
+      const givens = givensFractionRandomSeeded(regions, solution, seed, frac)
+      const count = countSolutionsFromPuzzle(regions, givens, {
+        maxSolutions: 2,
+        maxNodes: 2_000_000,
+      })
+      if (count !== 1) continue
+      const noGuess = solveNoGuessFromPuzzle(regions, givens)
+      if (!noGuess) continue
+      return givens
+    }
+  }
+  return null
+}
+
 function buildTier(tier) {
   const levels = []
   const { id, title, h, w } = tier
@@ -277,8 +308,18 @@ function buildTier(tier) {
     const sol = solutionFor(regions)
     if (!sol) throw new Error(`unsolvable ${id}`)
 
-    const seed = hashSeed(id, i * 7919 + 13)
-    const givens = givensFractionRandomSeeded(regions, sol, seed, givenFraction)
+    const givens = findDeterministicUniqueGivens(
+      regions,
+      sol,
+      id,
+      i,
+      givenFraction,
+    )
+    if (!givens) {
+      throw new Error(
+        `failed to build deterministic+unique givens for ${id}-${String(i).padStart(3, '0')}`,
+      )
+    }
 
     levels.push({
       id: `${id}-${String(i).padStart(3, '0')}`,
