@@ -113,6 +113,30 @@
   white-space: nowrap;
 }
 
+.field-nav {
+  display: flex;
+  gap: 0.5rem;
+  flex: 1 1 100%;
+}
+
+.field-nav button {
+  min-height: 2.5rem;
+  padding: 0.45rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.field-nav button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .app-loading,
 .app-error {
   margin: 0.5rem 0 0;
@@ -363,6 +387,16 @@
 
   .game-meta {
     font-size: 0.82rem;
+  }
+
+  .field-nav {
+    width: 100%;
+  }
+
+  .field-nav button {
+    flex: 1 1 0;
+    min-height: 2.85rem;
+    font-size: 0.95rem;
   }
 
   .board,

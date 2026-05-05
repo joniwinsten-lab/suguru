@@ -47,6 +47,8 @@ export function SuguruPage() {
 
   const tierTitle = POOL_TIERS.find((t) => t.id === tierId)?.title ?? tierId
   const levelNum = levelIndex + 1
+  const canGoPrev = !!poolForTier && levelIndex > 0
+  const canGoNext = !!poolForTier && levelIndex < poolForTier.count - 1
 
   return (
     <div className="app">
@@ -99,6 +101,27 @@ export function SuguruPage() {
             {poolForTier ? ` / ${poolForTier.count}` : ''}
           </span>
         </label>
+
+        <div className="field-nav" role="group" aria-label="Kentän selaus">
+          <button
+            type="button"
+            disabled={!canGoPrev}
+            onClick={() => setLevelIndex((i) => Math.max(0, i - 1))}
+          >
+            Edellinen kenttä
+          </button>
+          <button
+            type="button"
+            disabled={!canGoNext}
+            onClick={() =>
+              setLevelIndex((i) =>
+                poolForTier ? Math.min(poolForTier.count - 1, i + 1) : i,
+              )
+            }
+          >
+            Seuraava kenttä
+          </button>
+        </div>
       </div>
 
       {poolError ? (
