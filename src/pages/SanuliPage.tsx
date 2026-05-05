@@ -15,7 +15,7 @@ import './SanuliPage.css'
 
 const ROWS = 6
 const COLS = 5
-const STORAGE_KEY = 'sanuli-state-v2'
+const STORAGE_KEY = 'sanuli-state-v3'
 
 type SlotStatus = 'locked' | 'playing' | 'won' | 'lost'
 
@@ -130,7 +130,6 @@ export function SanuliPage() {
   const [indices, setIndices] = useState<number[]>([])
   const [slotsPersist, setSlotsPersist] = useState<SlotPersisted[]>([])
   const [hydrated, setHydrated] = useState(false)
-  const hydrateOnce = useRef(false)
   const [shakeRow, setShakeRow] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const toastTimer = useRef<number | null>(null)
@@ -178,6 +177,13 @@ export function SanuliPage() {
       .then((p) => {
         if (cancelled) return
         setPack(p)
+        if (p.solutions.length < DAILY_WORD_SLOTS) {
+          setLoadError(
+            `Sanalistassa pitää olla vähintään ${DAILY_WORD_SLOTS} ratkaisua täydelle päivälle (nyt ${p.solutions.length}).`,
+          )
+          setIndices([])
+          return
+        }
         setLoadError(null)
         const idx = pickDailyWordIndices(dayKey, p.solutions.length)
         setIndices(idx)
@@ -191,14 +197,18 @@ export function SanuliPage() {
     }
   }, [dayKey])
 
+  const indicesFingerprint = indices.join(',')
+
   useEffect(() => {
-    if (!pack || indices.length === 0 || hydrateOnce.current) return
-    hydrateOnce.current = true
+    if (!pack || indices.length === 0) {
+      setHydrated(false)
+      return
+    }
     const n = indices.length
     const saved = loadPersisted(dayKey, n)
     setSlotsPersist(saved?.slots ?? emptySlots(n))
     setHydrated(true)
-  }, [pack, dayKey, indices])
+  }, [pack, dayKey, indicesFingerprint])
 
   useEffect(() => {
     if (!hydrated || !pack || indices.length === 0) return
