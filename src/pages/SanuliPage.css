@@ -107,6 +107,53 @@
   box-shadow: 0 4px 12px rgb(15 23 42 / 0.2);
 }
 
+.sanuli-celebration {
+  position: fixed;
+  top: 4.1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 19;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 11rem;
+  padding: 0.6rem 0.95rem 0.7rem;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--sanuli-correct) 45%, transparent);
+  background: color-mix(in srgb, var(--surface) 90%, var(--sanuli-correct) 10%);
+  box-shadow: 0 12px 24px rgb(15 23 42 / 0.2);
+  animation: sanuli-pop 260ms ease-out;
+}
+
+.sanuli-celebration__badge {
+  font-size: 1.25rem;
+}
+
+.sanuli-celebration__text {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--success);
+}
+
+.sanuli-celebration__sub {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+@keyframes sanuli-pop {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
 .sanuli-board {
   display: flex;
   flex-direction: column;
@@ -286,6 +333,66 @@
   color: #fff;
 }
 
+.sanuli-day-summary {
+  margin: 0.4rem auto 1rem;
+  max-width: 24rem;
+}
+
+.sanuli-day-summary__card {
+  margin-top: 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 0.85rem 0.9rem 0.95rem;
+}
+
+.sanuli-day-summary__card h2 {
+  margin: 0;
+  text-align: center;
+  font-size: 1.05rem;
+}
+
+.sanuli-day-summary__date {
+  margin: 0.25rem 0 0.7rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.sanuli-day-summary__list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.8rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.sanuli-day-summary__list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.92rem;
+}
+
+.sanuli-day-summary__list strong {
+  font-size: 0.95rem;
+}
+
+.sanuli-day-summary__card button {
+  width: 100%;
+  padding: 0.55rem 0.9rem;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 @media (max-width: 400px) {
   .sanuli-key {
     height: 2.85rem;
@@ -295,6 +402,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .sanuli-row--shake {
+    animation: none;
+  }
+  .sanuli-celebration {
     animation: none;
   }
 }
