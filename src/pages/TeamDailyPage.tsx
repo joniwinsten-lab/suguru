@@ -291,7 +291,9 @@ export function TeamDailyPage() {
           {spec.kind === 'order' ? (
             <>
               <p className="team-daily__hint">
-                Paina luvut nousevassa järjestyksessä (pienin ensin).
+                {spec.clickOrder === 'asc'
+                  ? 'Paina luvut nousevassa järjestyksessä (pienin ensin).'
+                  : 'Paina luvut laskevassa järjestyksessä (suurin ensin).'}
               </p>
               <div className="team-daily__order-btns">
                 {spec.shuffled.map((n) => (

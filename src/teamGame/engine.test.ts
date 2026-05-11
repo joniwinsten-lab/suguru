@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildDailyRounds,
-  expectedOrderSequence,
+  expectedClickSequence,
   scoreColorAnswer,
   scoreOrderAnswer,
   scoreTapAnswer,
+  sortedValues,
 } from './engine'
 
 describe('teamGame engine', () => {
@@ -31,7 +32,11 @@ describe('teamGame engine', () => {
       } else if (r.kind === 'order') {
         expect(new Set(r.values).size).toBe(3)
         expect(new Set(r.shuffled).size).toBe(3)
-        expect(expectedOrderSequence(r.values)).toEqual([...r.values].sort((a, b) => a - b))
+        expect(['asc', 'desc']).toContain(r.clickOrder)
+        const asc = sortedValues(r.values)
+        expect(expectedClickSequence(r)).toEqual(
+          r.clickOrder === 'asc' ? asc : [...asc].reverse(),
+        )
       } else {
         expect(r.gridSize).toBe(3)
         expect(r.correctIndex).toBeGreaterThanOrEqual(0)
@@ -54,13 +59,23 @@ describe('teamGame engine', () => {
       ),
     ).toBe(0)
 
-    const order = {
+    const orderAsc = {
       kind: 'order' as const,
       values: [2, 5, 9] as const,
       shuffled: [5, 9, 2] as const,
+      clickOrder: 'asc' as const,
     }
-    expect(scoreOrderAnswer(order, [2, 5, 9])).toBe(10)
-    expect(scoreOrderAnswer(order, [2, 9, 5])).toBe(0)
+    expect(scoreOrderAnswer(orderAsc, [2, 5, 9])).toBe(10)
+    expect(scoreOrderAnswer(orderAsc, [2, 9, 5])).toBe(0)
+
+    const orderDesc = {
+      kind: 'order' as const,
+      values: [2, 5, 9] as const,
+      shuffled: [5, 9, 2] as const,
+      clickOrder: 'desc' as const,
+    }
+    expect(scoreOrderAnswer(orderDesc, [9, 5, 2])).toBe(10)
+    expect(scoreOrderAnswer(orderDesc, [2, 5, 9])).toBe(0)
 
     expect(scoreTapAnswer({ kind: 'tap', gridSize: 3, correctIndex: 4 }, 4)).toBe(10)
     expect(scoreTapAnswer({ kind: 'tap', gridSize: 3, correctIndex: 4 }, 3)).toBe(0)

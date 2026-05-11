@@ -6,7 +6,8 @@
 export const ROUND_POINTS = 10
 export const DEFAULT_ROUND_COUNT = 18
 
-const PALETTE = ['#c94c4c', '#4caf50', '#2196f3', '#9c27b0', '#ff9800'] as const
+/** Korkea kontrasti, “pika peli” -fiilis; vältetään vihreää jotta se ei sekoitu “oikein”-palautteeseen. */
+const PALETTE = ['#ff2d6a', '#00d4ff', '#ffd400', '#b388ff', '#ff6b35'] as const
 
 export type RoundKind = 'color' | 'order' | 'tap'
 
@@ -22,6 +23,8 @@ export type OrderRound = {
   values: readonly [number, number, number]
   /** Sama järjestys kuin näytössä (sekoitettu) */
   shuffled: readonly [number, number, number]
+  /** Painaako pelaaja luvut pienimmästä suurimpaan vai toisin päin */
+  clickOrder: 'asc' | 'desc'
 }
 
 export type TapRound = {
@@ -87,7 +90,8 @@ export function buildDailyRounds(
     } else if (kind === 'order') {
       const values = pickThreeDistinctNumbers(rng)
       const shuffled = shuffle([...values], rng) as [number, number, number]
-      out.push({ kind: 'order', values, shuffled })
+      const clickOrder: 'asc' | 'desc' = rng() < 0.5 ? 'asc' : 'desc'
+      out.push({ kind: 'order', values, shuffled, clickOrder })
     } else {
       const correctIndex = Math.floor(rng() * 9)
       out.push({ kind: 'tap', gridSize: 3, correctIndex })
@@ -96,8 +100,15 @@ export function buildDailyRounds(
   return out
 }
 
-export function expectedOrderSequence(values: readonly [number, number, number]): number[] {
+/** Lajiteltu pienimmästä suurimpaan (arvot, ei klikkijärjestystä). */
+export function sortedValues(values: readonly [number, number, number]): number[] {
   return [...values].sort((a, b) => a - b)
+}
+
+/** Oikea klikkijärjestys tälle kierrokselle (nouseva tai laskeva). */
+export function expectedClickSequence(spec: OrderRound): number[] {
+  const s = sortedValues(spec.values)
+  return spec.clickOrder === 'desc' ? s.reverse() : s
 }
 
 export function scoreColorAnswer(spec: ColorRound, pickedIndex: number): number {
@@ -108,7 +119,7 @@ export function scoreOrderAnswer(
   spec: OrderRound,
   clickedInOrder: readonly number[],
 ): number {
-  const want = expectedOrderSequence(spec.values)
+  const want = expectedClickSequence(spec)
   if (clickedInOrder.length !== 3) return 0
   for (let i = 0; i < 3; i++) {
     if (clickedInOrder[i] !== want[i]) return 0
