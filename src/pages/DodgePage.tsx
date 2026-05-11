@@ -9,6 +9,7 @@ import {
 } from '../dodgeGame/leaderboardApi'
 import { validatePlayerName } from '../dodgeGame/name'
 import { isSupabaseConfigured } from '../dodgeGame/supabaseClient'
+import playerSpriteUrl from '../assets/dodge-player.jpg'
 import './DodgePage.css'
 
 const W = 360
@@ -27,8 +28,6 @@ const OBSTACLE_STROKE = '#3d0f26'
 
 const BEST_KEY = 'suguru_dodge_best_m'
 
-const PLAYER_SPRITE_SRC = `${import.meta.env.BASE_URL}dodge-player.jpg`
-
 function readBest(): number {
   try {
     const v = localStorage.getItem(BEST_KEY)
@@ -38,6 +37,29 @@ function readBest(): number {
   } catch {
     return 0
   }
+}
+
+function strokeFilledRoundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+  fillStyle: string,
+  strokeStyle: string,
+) {
+  ctx.fillStyle = fillStyle
+  ctx.strokeStyle = strokeStyle
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, y, w, h, r)
+  } else {
+    ctx.rect(x, y, w, h)
+  }
+  ctx.fill()
+  ctx.stroke()
 }
 
 function writeBest(m: number) {
@@ -215,13 +237,16 @@ export function DodgePage() {
     }
 
     for (const o of obstaclesRef.current) {
-      ctx.fillStyle = OBSTACLE_FILL
-      ctx.strokeStyle = OBSTACLE_STROKE
-      ctx.lineWidth = 2
-      ctx.beginPath()
-      ctx.roundRect(o.x, o.y, o.w, o.h, 4)
-      ctx.fill()
-      ctx.stroke()
+      strokeFilledRoundRect(
+        ctx,
+        o.x,
+        o.y,
+        o.w,
+        o.h,
+        4,
+        OBSTACLE_FILL,
+        OBSTACLE_STROKE,
+      )
     }
 
     const px = pxRef.current
@@ -252,20 +277,27 @@ export function DodgePage() {
   }, [])
 
   useEffect(() => {
+    let cancelled = false
     const img = new Image()
-    img.decoding = 'async'
-    img.src = PLAYER_SPRITE_SRC
     const onLoad = () => {
+      if (cancelled) return
       playerSpriteRef.current = img
       draw()
     }
-    if (img.complete && img.naturalWidth > 0) {
-      playerSpriteRef.current = img
+    const onError = () => {
+      if (cancelled) return
+      playerSpriteRef.current = null
       draw()
-    } else {
-      img.addEventListener('load', onLoad, { once: true })
     }
-    return () => img.removeEventListener('load', onLoad)
+    img.addEventListener('load', onLoad, { once: true })
+    img.addEventListener('error', onError, { once: true })
+    img.src = playerSpriteUrl
+    if (img.complete && img.naturalWidth > 0) onLoad()
+    return () => {
+      cancelled = true
+      img.removeEventListener('load', onLoad)
+      img.removeEventListener('error', onError)
+    }
   }, [draw])
 
   const endGame = useCallback(() => {
@@ -485,7 +517,7 @@ export function DodgePage() {
             <canvas
               ref={canvasRef}
               role="img"
-              aria-label="Väistöpeli: liikuta hiirtä väistääksesi oransseja esteitä"
+              aria-label="Väistöpeli: liikuta hiirtä väistääksesi tummanpunaisia esteitä"
               onPointerMove={onPointerMove}
               onPointerDown={(e) => {
                 if (phaseRef.current === 'playing') {
