@@ -25,8 +25,8 @@
   margin: 0 auto 0.75rem;
   border-radius: 10px;
   overflow: hidden;
-  border: 2px solid var(--border-strong);
-  background: #0f172a;
+  border: 2px solid rgba(90, 21, 55, 0.25);
+  background: #fbeae3;
   touch-action: none;
 }
 

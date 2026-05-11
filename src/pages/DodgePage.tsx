@@ -21,7 +21,13 @@ type Phase = 'lobby' | 'playing' | 'over'
 
 type LeaderTab = 'day' | 'week' | 'month' | 'all'
 
+const ARENA_BG = '#FBEAE3'
+const OBSTACLE_FILL = '#5A1537'
+const OBSTACLE_STROKE = '#3d0f26'
+
 const BEST_KEY = 'suguru_dodge_best_m'
+
+const PLAYER_SPRITE_SRC = `${import.meta.env.BASE_URL}dodge-player.jpg`
 
 function readBest(): number {
   try {
@@ -109,6 +115,7 @@ export function DodgePage() {
   const rafRef = useRef(0)
   const frameRef = useRef(0)
   const gameStartMsRef = useRef(0)
+  const playerSpriteRef = useRef<HTMLImageElement | null>(null)
 
   const loadBoard = useCallback(async () => {
     if (!isSupabaseConfigured()) {
@@ -194,11 +201,11 @@ export function DodgePage() {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    ctx.fillStyle = '#0c1222'
+    ctx.fillStyle = ARENA_BG
     ctx.fillRect(0, 0, W, H)
 
     const scroll = (distanceRef.current * 3) % 40
-    ctx.strokeStyle = 'rgba(148, 163, 184, 0.12)'
+    ctx.strokeStyle = 'rgba(90, 21, 55, 0.08)'
     ctx.lineWidth = 1
     for (let x = -scroll; x < W + 40; x += 40) {
       ctx.beginPath()
@@ -208,8 +215,8 @@ export function DodgePage() {
     }
 
     for (const o of obstaclesRef.current) {
-      ctx.fillStyle = '#f97316'
-      ctx.strokeStyle = '#c2410c'
+      ctx.fillStyle = OBSTACLE_FILL
+      ctx.strokeStyle = OBSTACLE_STROKE
       ctx.lineWidth = 2
       ctx.beginPath()
       ctx.roundRect(o.x, o.y, o.w, o.h, 4)
@@ -219,14 +226,47 @@ export function DodgePage() {
 
     const px = pxRef.current
     const py = pyRef.current
-    ctx.beginPath()
-    ctx.arc(px, py, PLAYER_R, 0, Math.PI * 2)
-    ctx.fillStyle = '#38bdf8'
-    ctx.fill()
-    ctx.strokeStyle = '#e0f2fe'
-    ctx.lineWidth = 2
-    ctx.stroke()
+    const sprite = playerSpriteRef.current
+    if (sprite && sprite.complete && sprite.naturalWidth > 0) {
+      const d = PLAYER_R * 2
+      ctx.save()
+      ctx.beginPath()
+      ctx.arc(px, py, PLAYER_R, 0, Math.PI * 2)
+      ctx.clip()
+      ctx.drawImage(sprite, px - PLAYER_R, py - PLAYER_R, d, d)
+      ctx.restore()
+      ctx.beginPath()
+      ctx.arc(px, py, PLAYER_R, 0, Math.PI * 2)
+      ctx.strokeStyle = 'rgba(90, 21, 55, 0.35)'
+      ctx.lineWidth = 1.5
+      ctx.stroke()
+    } else {
+      ctx.beginPath()
+      ctx.arc(px, py, PLAYER_R, 0, Math.PI * 2)
+      ctx.fillStyle = '#e8d4ef'
+      ctx.fill()
+      ctx.strokeStyle = OBSTACLE_FILL
+      ctx.lineWidth = 2
+      ctx.stroke()
+    }
   }, [])
+
+  useEffect(() => {
+    const img = new Image()
+    img.decoding = 'async'
+    img.src = PLAYER_SPRITE_SRC
+    const onLoad = () => {
+      playerSpriteRef.current = img
+      draw()
+    }
+    if (img.complete && img.naturalWidth > 0) {
+      playerSpriteRef.current = img
+      draw()
+    } else {
+      img.addEventListener('load', onLoad, { once: true })
+    }
+    return () => img.removeEventListener('load', onLoad)
+  }, [draw])
 
   const endGame = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
