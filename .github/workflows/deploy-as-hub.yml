@@ -44,14 +44,12 @@ jobs:
     permissions:
       contents: read
     steps:
-      # JamesIves/github-pages-deploy-action tarvitsee git-repon juuren (git config ilman --global).
-      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: dist-as
           path: dist-as
 
-      - name: README (mukana clean-deployissa)
+      - name: README (mukana deployissa)
         run: |
           printf '%s\n' \
             '# as' \
@@ -63,11 +61,14 @@ jobs:
             'Lähdekoodi: https://github.com/joniwinsten-lab/suguru' \
             > dist-as/README.md
 
-      - name: Push to joniwinsten-lab/as (main → GitHub Pages)
-        uses: JamesIves/github-pages-deploy-action@v4
+      # Ulkoiseen repoon: PAT (ei GITHUB_TOKEN). Ei suguru-checkoutia → ei worktree-ristiriitaa `main`-haaran kanssa.
+      - name: Push dist-as → joniwinsten-lab/as (main)
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          folder: dist-as
-          branch: main
-          repository-name: joniwinsten-lab/as
-          token: ${{ secrets.AS_SITE_DEPLOY_TOKEN }}
-          clean: true
+          personal_token: ${{ secrets.AS_SITE_DEPLOY_TOKEN }}
+          external_repository: joniwinsten-lab/as
+          publish_branch: main
+          publish_dir: ./dist-as
+          force_orphan: true
+          user_name: github-actions[bot]
+          user_email: github-actions[bot]@users.noreply.github.com

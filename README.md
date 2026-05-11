@@ -58,7 +58,7 @@ npm run build:gh-pages-as
 
 **Julkaisu repoon `as`:** repossa [`joniwinsten-lab/as`](https://github.com/joniwinsten-lab/as) **Pages** → *Deploy from a branch* → **`main`** / juuri (`/`). Staattinen build on `main`-haaran juuressa. Suguru-repossa (automaatio):
 
-1. *Settings → Secrets and variables → Actions* → salaisuus **`AS_SITE_DEPLOY_TOKEN`**: PAT, jolla on **sisältökirjoitus** kohteeseen `joniwinsten-lab/as`.
+1. *Settings → Secrets and variables → Actions* → salaisuus **`AS_SITE_DEPLOY_TOKEN`**: GitHub **PAT** (classic: `repo`; fine-grained: *Contents* **Read and write** repoon `joniwinsten-lab/as`). Vanhentunut tai väärin rajattu token näkyy workflow-lokissa virheenä *Authentication failed*.
 
 Push `main`iin repoon **`joniwinsten-lab/suguru`** ajaa [`.github/workflows/deploy-as-hub.yml`](.github/workflows/deploy-as-hub.yml), joka buildaa `dist-as` ja työntää sen `as`-repoon haaraan **`main`** (GitHub Pages julkaisee saman haaran juuren). Forkit vain buildaavat artifactin ilman deploy-askelta.
 
