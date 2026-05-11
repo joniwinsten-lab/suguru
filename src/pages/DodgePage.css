@@ -1,0 +1,90 @@
+.dodge {
+  max-width: min(28rem, 100%);
+  margin: 0 auto;
+}
+
+.dodge__lead {
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.dodge__panel {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.dodge__arena-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto 0.75rem;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid var(--border-strong);
+  background: #0f172a;
+  touch-action: none;
+}
+
+.dodge__arena-wrap canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  vertical-align: middle;
+}
+
+.dodge__hud {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 0.5rem;
+  color: var(--text);
+}
+
+.dodge__hint {
+  font-size: 0.88rem;
+  color: var(--muted);
+  margin: 0 0 0.75rem;
+}
+
+.dodge__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+}
+
+.dodge__btn--primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.dodge__over {
+  text-align: center;
+}
+
+.dodge__over strong {
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.dodge__best {
+  font-size: 0.88rem;
+  color: var(--muted);
+  margin: 0.5rem 0 0;
+}

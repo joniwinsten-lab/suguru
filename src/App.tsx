@@ -1,6 +1,7 @@
 import { HashRouter, NavLink, Route, Routes } from 'react-router-dom'
 import { SanuliPage } from './pages/SanuliPage'
 import { SuguruPage } from './pages/SuguruPage'
+import { DodgePage } from './pages/DodgePage'
 import { TeamDailyPage } from './pages/TeamDailyPage'
 import './App.css'
 
@@ -18,11 +19,15 @@ export default function App() {
         <NavLink className="site-nav__link" to="/tiimi">
           Tiimi
         </NavLink>
+        <NavLink className="site-nav__link" to="/vaisto">
+          Väistö
+        </NavLink>
       </nav>
       <Routes>
         <Route path="/" element={<SuguruPage />} />
         <Route path="/sanuli" element={<SanuliPage />} />
         <Route path="/tiimi" element={<TeamDailyPage />} />
+        <Route path="/vaisto" element={<DodgePage />} />
       </Routes>
     </HashRouter>
   )
