@@ -31,6 +31,7 @@ function cellStr(v: unknown): string {
   return String(v)
 }
 
+/** RPC palauttaa yhden rivin / nimi (case-insensitive): paras matka ikkunassa, tasapelissä pidempi aika. */
 export async function fetchDodgeLeaderboard(
   startDate: string,
   endDate: string,

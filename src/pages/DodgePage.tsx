@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { circleHitsRect } from '../dodgeGame/collision'
-import { utcDayKey, utcMonthRange, utcWeekRange } from '../dodgeGame/dayKey'
+import { utcDayKey } from '../dodgeGame/dayKey'
 import {
   dodgeAlreadyPlayed,
   fetchDodgeLeaderboard,
   submitDodgeScore,
   type DodgeLeaderboardRow,
 } from '../dodgeGame/leaderboardApi'
+import { dodgeLeaderboardDateRange, type DodgeLeaderTab } from '../dodgeGame/leaderboardRanges'
 import { validatePlayerName } from '../dodgeGame/name'
 import { isSupabaseConfigured } from '../dodgeGame/supabaseClient'
 import { caughtToUiMessage, safeUiString } from '../dodgeGame/errorMessage'
@@ -41,7 +42,7 @@ type Obstacle = {
 
 type Phase = 'lobby' | 'playing' | 'over'
 
-type LeaderTab = 'day' | 'week' | 'month' | 'all'
+type LeaderTab = DodgeLeaderTab
 
 const ARENA_BG = '#FBEAE3'
 const OBSTACLE_FILL = '#5A1537'
@@ -291,7 +292,8 @@ function drawObstacleLabel(ctx: CanvasRenderingContext2D, o: Obstacle, textColor
   ctx.restore()
 }
 
-const BEST_KEY = 'suguru_dodge_best_m'
+/** Uusi avain nollaa paikallisen "paras tällä laitteella" -ennätyksen stats-resetin yhteydessä. */
+const BEST_KEY = 'suguru_as_daily_life_best_m'
 
 function readBest(): number {
   try {
@@ -397,23 +399,7 @@ export function DodgePage() {
     setBoardLoading(true)
     setBoardError(null)
     try {
-      let start: string
-      let end: string
-      if (tab === 'day') {
-        start = dayKey
-        end = dayKey
-      } else if (tab === 'week') {
-        const w = utcWeekRange()
-        start = w.start
-        end = w.end
-      } else if (tab === 'month') {
-        const m = utcMonthRange()
-        start = m.start
-        end = m.end
-      } else {
-        start = '2000-01-01'
-        end = '2099-12-31'
-      }
+      const { start, end } = dodgeLeaderboardDateRange(tab, dayKey)
       const rows = await fetchDodgeLeaderboard(start, end)
       setBoardRows(rows)
     } catch (e: unknown) {
