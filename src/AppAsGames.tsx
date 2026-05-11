@@ -3,12 +3,7 @@ import { DodgePage } from './pages/DodgePage'
 import { SanuliPage } from './pages/SanuliPage'
 import './App.css'
 
-function hashBasename(): string | undefined {
-  const raw = import.meta.env.BASE_URL ?? '/'
-  const trimmed = raw.replace(/\/+$/, '')
-  return trimmed === '' ? undefined : trimmed
-}
-
+/** Älä käytä `import.meta.env.BASE_URL` HashRouter-basenameena: hash-polku on `#/…`, ei `/as/…`. */
 function GamesHub() {
   return (
     <main className="as-games-hub" aria-label="Pelivalinta">
@@ -33,7 +28,7 @@ function GamesHub() {
 /** Vain Sanuli + AS Daily life (julkaisu esim. https://joniwinsten-lab.github.io/as/). */
 export default function AppAsGames() {
   return (
-    <HashRouter basename={hashBasename()}>
+    <HashRouter>
       <nav className="site-nav" aria-label="Pelit">
         <NavLink className="site-nav__link" end to="/">
           Etusivu
