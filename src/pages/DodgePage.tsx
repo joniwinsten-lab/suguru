@@ -349,6 +349,8 @@ export function DodgePage() {
   const dayKey = useMemo(() => utcDayKey(), [])
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  /** Pelipaneeli: scroll mobiilissa näkyviin pelin alussa. */
+  const gamePanelRef = useRef<HTMLElement | null>(null)
   const phaseRef = useRef<Phase>('lobby')
   const [phase, setPhase] = useState<Phase>('lobby')
   const [displayM, setDisplayM] = useState(0)
@@ -777,6 +779,17 @@ export function DodgePage() {
     draw()
   }, [draw, phase])
 
+  /** Mobiilissa peli alkaa näkyvällä alueella ilman ylimääräistä skrollia. */
+  useEffect(() => {
+    if (phase !== 'playing') return
+    const id = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        gamePanelRef.current?.scrollIntoView({ block: 'start', behavior: 'instant' })
+      })
+    })
+    return () => cancelAnimationFrame(id)
+  }, [phase])
+
   const onPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (phaseRef.current !== 'playing') return
     const canvas = canvasRef.current
@@ -824,7 +837,7 @@ export function DodgePage() {
   const startBlocked = supabaseOn && (playedToday || playedCheckLoading)
 
   return (
-    <div className="app dodge">
+    <div className={`app dodge${phase === 'playing' ? ' dodge--playing-mobile' : ''}`}>
       <header className="app-header">
         <h1>Daily life</h1>
         <p className="dodge__lead">
@@ -873,7 +886,7 @@ export function DodgePage() {
       ) : null}
 
       {phase === 'playing' || phase === 'over' ? (
-        <section className="dodge__panel" aria-label="Pelialue">
+        <section ref={gamePanelRef} className="dodge__panel" aria-label="Pelialue">
           {phase === 'playing' ? (
             <div className="dodge__hud" aria-live="polite">
               <span className="dodge__hud-main">
@@ -907,7 +920,7 @@ export function DodgePage() {
           </div>
 
           {phase === 'playing' ? (
-            <p className="dodge__hint" style={{ marginBottom: 0 }}>
+            <p className="dodge__hint dodge__hint--hide-when-playing-mobile" style={{ marginBottom: 0 }}>
               Vinkki: aloita alhaalta — tilaa väistää lisääntyy ylöspäin.
             </p>
           ) : null}

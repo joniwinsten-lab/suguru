@@ -181,3 +181,38 @@
   color: var(--muted);
   font-weight: 600;
 }
+
+/* Mobiili: pelin aikana pelialue näkyviin ilman skrollausta (piilota ylimääräinen sisältö, rajaa canvas). */
+@media (max-width: 42rem) {
+  .app.dodge--playing-mobile {
+    padding-top: 0.4rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .app.dodge--playing-mobile .app-header,
+  .app.dodge--playing-mobile .dodge__panel[aria-label='Top-listat'] {
+    display: none;
+  }
+
+  .app.dodge--playing-mobile .dodge__hint--hide-when-playing-mobile {
+    display: none;
+  }
+
+  .app.dodge--playing-mobile .dodge__panel[aria-label='Pelialue'] {
+    margin-bottom: 0.5rem;
+    scroll-margin-top: 0.25rem;
+  }
+
+  .app.dodge--playing-mobile .dodge__arena-wrap {
+    max-height: min(calc(100dvh - 5.25rem), calc(100svh - 5.25rem));
+  }
+
+  .app.dodge--playing-mobile .dodge__arena-wrap canvas {
+    display: block;
+    max-height: min(calc(100dvh - 6rem), calc(100svh - 6rem));
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
+  }
+}
