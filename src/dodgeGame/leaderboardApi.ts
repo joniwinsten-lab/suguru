@@ -1,3 +1,4 @@
+import { errorToReadableString } from './errorMessage'
 import { getSupabase } from './supabaseClient'
 
 export type DodgeLeaderboardRow = {
@@ -14,6 +15,22 @@ function toNum(v: unknown): number {
   return Number.NaN
 }
 
+/** Estää [object Object] -soluja, jos RPC palauttaa JSON-kenttiä. */
+function cellStr(v: unknown): string {
+  if (v == null) return ''
+  if (typeof v === 'string') return v
+  if (typeof v === 'number' && Number.isFinite(v)) return String(v)
+  if (typeof v === 'boolean') return String(v)
+  if (typeof v === 'object') {
+    try {
+      return JSON.stringify(v)
+    } catch {
+      return ''
+    }
+  }
+  return String(v)
+}
+
 export async function fetchDodgeLeaderboard(
   startDate: string,
   endDate: string,
@@ -23,14 +40,18 @@ export async function fetchDodgeLeaderboard(
     p_start: startDate,
     p_end: endDate,
   })
-  if (error) throw error
-  const rows = (data ?? []) as Record<string, unknown>[]
+  if (error) throw new Error(errorToReadableString(error))
+  const raw = data ?? []
+  if (!Array.isArray(raw)) {
+    throw new Error('Top-listan vastaus ei ole taulukko. Tarkista get_dodge_leaderboard-RPC.')
+  }
+  const rows = raw as Record<string, unknown>[]
   return rows.map((r) => ({
-    player_name: String(r.player_name ?? ''),
+    player_name: cellStr(r.player_name),
     distance_m: toNum(r.distance_m),
     run_ms: Math.round(toNum(r.run_ms)),
-    day_key: String(r.day_key ?? ''),
-    created_at: String(r.created_at ?? ''),
+    day_key: cellStr(r.day_key),
+    created_at: cellStr(r.created_at),
   }))
 }
 
@@ -51,7 +72,7 @@ export async function submitDodgeScore(payload: DodgeSubmitPayload): Promise<voi
     run_ms: Math.max(0, Math.round(payload.runMs)),
     game_version: 'v1',
   })
-  if (error) throw error
+  if (error) throw new Error(errorToReadableString(error))
 }
 
 export async function dodgeAlreadyPlayed(dayKey: string, playerName: string): Promise<boolean> {
@@ -60,6 +81,6 @@ export async function dodgeAlreadyPlayed(dayKey: string, playerName: string): Pr
     p_day: dayKey,
     p_name: playerName.trim(),
   })
-  if (error) throw error
+  if (error) throw new Error(errorToReadableString(error))
   return Boolean(data)
 }

@@ -41,10 +41,23 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
+  gap: 0.5rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   margin-bottom: 0.5rem;
   color: var(--text);
+}
+
+.dodge__hud-main {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.dodge__reserve {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #b369f3;
 }
 
 .dodge__hint {

@@ -9,12 +9,25 @@ import {
 } from '../dodgeGame/leaderboardApi'
 import { validatePlayerName } from '../dodgeGame/name'
 import { isSupabaseConfigured } from '../dodgeGame/supabaseClient'
+import { caughtToUiMessage, safeUiString } from '../dodgeGame/errorMessage'
 import playerSpriteUrl from '../assets/dodge-player.jpg'
 import './DodgePage.css'
 
 const W = 360
 const H = 600
 const PLAYER_R = 11
+
+/** Esteen tekstin reunus (sama piirrossa ja koon laskennassa). */
+const LABEL_PAD_X = 4
+const LABEL_PAD_Y = 3
+/** Lisävälys clip-reunan ja rivityksen väliin. */
+const LABEL_INNER_TRIM = 2
+/** Pienin fontti, jolla tekstiä yritetään pitää ilman skaalausta (spawn kasvattaa laatikkoa tämän alle). */
+const LABEL_MIN_READABLE_PX = 8
+/** Korkeus ei kasva loputtomiin; isompi arvo sallii useamman rivin (rivitys) ennen kuin leveys täytetään. */
+const MAX_OBSTACLE_LABEL_HEIGHT = 120
+
+type ObstacleKind = 'normal' | 'golive' | 'extraLife'
 
 type Obstacle = {
   x: number
@@ -23,8 +36,7 @@ type Obstacle = {
   h: number
   vy: number
   label: string
-  /** Harvinainen nopea leveä "Golive bug fix" -palkki */
-  golive?: boolean
+  kind: ObstacleKind
 }
 
 type Phase = 'lobby' | 'playing' | 'over'
@@ -37,6 +49,13 @@ const OBSTACLE_STROKE = '#3d0f26'
 const GOLIVE_LABEL = 'Golive bug fix'
 /** Todennäköisyys että yksi spawn on Golive-palkki (~1.5 %). */
 const GOLIVE_SPAWN_P = 0.015
+
+const EXTRA_LIFE_FILL = '#B369F3'
+const EXTRA_LIFE_STROKE = '#6d28d9'
+const EXTRA_LIFE_LABEL = 'process developed'
+/** Seuraava extra-elämä yrittää syntyä kun matka (m) ylittää tämän. */
+const extraLifeNextSpawnMeters = (from: number, rnd: () => number) =>
+  from + 450 + rnd() * 130
 
 const OBSTACLE_LABELS = [
   'Customer',
@@ -64,12 +83,163 @@ function pickObstacleLabel(rng: () => number): string {
   return OBSTACLE_LABELS[Math.min(i, OBSTACLE_LABELS.length - 1)]!
 }
 
+/** Leveys glyyfeille (bold yms. ylittää usein pelkän `width`-arvon). */
+function measuredTextWidth(ctx: CanvasRenderingContext2D, s: string): number {
+  if (!s) return 0
+  const m = ctx.measureText(s)
+  let w = m.width
+  if (typeof m.actualBoundingBoxLeft === 'number' && typeof m.actualBoundingBoxRight === 'number') {
+    w = Math.max(w, m.actualBoundingBoxLeft + m.actualBoundingBoxRight)
+  } else {
+    w *= 1.08
+  }
+  return w
+}
+
+/** Rivin korkeus kyseiselle tekstille (baseline + nousevat/laskevat). */
+function measuredLineHeightForLine(ctx: CanvasRenderingContext2D, fontPx: number, line: string): number {
+  const sample = line.length > 0 ? line : 'Mg'
+  const m = ctx.measureText(sample)
+  if (typeof m.actualBoundingBoxAscent === 'number' && typeof m.actualBoundingBoxDescent === 'number') {
+    return Math.max(fontPx * 1.05, m.actualBoundingBoxAscent + m.actualBoundingBoxDescent + 2)
+  }
+  return fontPx * 1.3
+}
+
+function uniformLineHeight(
+  ctx: CanvasRenderingContext2D,
+  fontPx: number,
+  lines: string[],
+): number {
+  if (lines.length === 0) return fontPx * 1.3
+  return Math.max(fontPx * 1.12, ...lines.map((ln) => measuredLineHeightForLine(ctx, fontPx, ln)))
+}
+
+/** Rivittää tekstin niin, että jokainen rivi mahtuu `maxW`:hen (mitta nykyisellä fontilla). */
+function wrapLinesToWidth(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean)
+  if (words.length === 0) return [text.length > 0 ? text : '?']
+
+  const lines: string[] = []
+  let line = ''
+
+  const pushWord = (word: string) => {
+    if (measuredTextWidth(ctx, word) <= maxW) {
+      line = line ? `${line} ${word}` : word
+      return
+    }
+    if (line) {
+      lines.push(line)
+      line = ''
+    }
+    let chunk = ''
+    for (const ch of word) {
+      const next = chunk + ch
+      if (measuredTextWidth(ctx, next) <= maxW) {
+        chunk = next
+      } else {
+        if (chunk) lines.push(chunk)
+        chunk = ch
+      }
+    }
+    if (chunk) line = chunk
+  }
+
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word
+    if (measuredTextWidth(ctx, candidate) <= maxW) {
+      line = candidate
+    } else {
+      if (line) lines.push(line)
+      line = ''
+      pushWord(word)
+    }
+  }
+  if (line) lines.push(line)
+  return lines
+}
+
+function innerLabelBounds(w: number, h: number): { maxW: number; maxH: number } {
+  const maxW = Math.max(1, w - LABEL_PAD_X * 2 - LABEL_INNER_TRIM)
+  const maxH = Math.max(1, h - LABEL_PAD_Y * 2 - LABEL_INNER_TRIM)
+  return { maxW, maxH }
+}
+
+let measureCanvas: HTMLCanvasElement | null = null
+function getMeasureCtx(): CanvasRenderingContext2D {
+  if (!measureCanvas) {
+    measureCanvas = document.createElement('canvas')
+    measureCanvas.width = W
+    measureCanvas.height = Math.min(H, 240)
+  }
+  const c = measureCanvas.getContext('2d')
+  if (!c) throw new Error('Canvas 2d ei saatavilla')
+  return c
+}
+
+function measureLabelLayout(
+  ctx: CanvasRenderingContext2D,
+  label: string,
+  innerW: number,
+  innerH: number,
+  minFontPx: number,
+): { fontPx: number; lines: string[]; lineH: number } | null {
+  const raw = label.trim() || '?'
+  const setFont = (px: number) => {
+    ctx.font = `bold ${px}px system-ui, -apple-system, "Segoe UI", sans-serif`
+  }
+  const startPx = Math.min(12, Math.max(9, Math.floor(innerH * 0.4)))
+  for (let fontPx = startPx; fontPx >= minFontPx; fontPx--) {
+    setFont(fontPx)
+    const lines = wrapLinesToWidth(ctx, raw, innerW)
+    if (lines.length === 0) continue
+    const lineH = uniformLineHeight(ctx, fontPx, lines)
+    const blockH = lines.length * lineH
+    if (blockH > innerH) continue
+    if (!lines.every((ln) => measuredTextWidth(ctx, ln) <= innerW)) continue
+    return { fontPx, lines, lineH }
+  }
+  return null
+}
+
+/** Kasvattaa ulkomittoja: ensin korkeus (rivitys, paksumpi laatikko), vasta sitten leveys. */
+function growObstacleToFitLabel(
+  label: string,
+  baseW: number,
+  baseH: number,
+  capOuterW: number,
+  capOuterH: number,
+  minReadablePx: number,
+): { w: number; h: number } {
+  const ctx = getMeasureCtx()
+  let w = Math.max(20, baseW)
+  let h = Math.max(10, baseH)
+  const limitW = Math.min(capOuterW, W - 8)
+  const limitH = Math.min(capOuterH, MAX_OBSTACLE_LABEL_HEIGHT)
+
+  for (let i = 0; i < 500; i++) {
+    const { maxW, maxH } = innerLabelBounds(w, h)
+    if (measureLabelLayout(ctx, label, maxW, maxH, minReadablePx)) {
+      return { w: Math.min(w, limitW), h: Math.min(h, limitH) }
+    }
+    if (h < limitH) {
+      h = Math.min(limitH, h + 6)
+    } else if (w < limitW) {
+      w = Math.min(limitW, w + Math.max(8, Math.ceil((limitW - w) * 0.12)))
+    } else {
+      break
+    }
+  }
+  return { w: limitW, h: limitH }
+}
+
+function clampObstacleX(x: number, obstacleW: number): number {
+  return clamp(x, 4, W - obstacleW - 4)
+}
+
 function drawObstacleLabel(ctx: CanvasRenderingContext2D, o: Obstacle, textColor: string) {
-  const padX = 3
-  const padY = 2
-  const maxW = o.w - padX * 2
-  const maxH = o.h - padY * 2
-  if (maxW < 8 || maxH < 10) return
+  const { maxW, maxH } = innerLabelBounds(o.w, o.h)
+  if (maxW < 2 || maxH < 2) return
 
   const raw = o.label?.trim() || '?'
   ctx.save()
@@ -84,31 +254,40 @@ function drawObstacleLabel(ctx: CanvasRenderingContext2D, o: Obstacle, textColor
   ctx.fillStyle = textColor
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  const cx = o.x + o.w / 2
-  const cy = o.y + o.h / 2
 
-  let fontPx = Math.min(12, Math.max(9, Math.floor(maxH * 0.42)))
-  let display = raw
+  const cx = o.x + o.w / 2
+  const contentTop = o.y + LABEL_PAD_Y + LABEL_INNER_TRIM / 2
+
+  const layout = measureLabelLayout(ctx, raw, maxW, maxH, 2)
+  if (layout) {
+    const { lines, lineH } = layout
+    const blockH = lines.length * lineH
+    const top = contentTop + (maxH - blockH) / 2
+    lines.forEach((ln, i) => {
+      ctx.fillText(ln, cx, top + lineH * (i + 0.5))
+    })
+    ctx.restore()
+    return
+  }
 
   const setFont = (px: number) => {
     ctx.font = `bold ${px}px system-ui, -apple-system, "Segoe UI", sans-serif`
   }
-
-  for (;;) {
-    setFont(fontPx)
-    if (ctx.measureText(display).width <= maxW || fontPx <= 8) break
-    fontPx -= 1
+  setFont(2)
+  const linesFb = wrapLinesToWidth(ctx, raw, maxW)
+  const lineH = uniformLineHeight(ctx, 2, linesFb)
+  const blockH = Math.max(lineH, linesFb.length * lineH)
+  const maxLineWF = Math.max(1, ...linesFb.map((ln) => measuredTextWidth(ctx, ln)))
+  const s = Math.min(1, (maxW - 1) / maxLineWF, (maxH - 1) / blockH)
+  const cxB = o.x + LABEL_PAD_X + LABEL_INNER_TRIM / 2 + maxW / 2
+  const cyB = contentTop + maxH / 2
+  ctx.translate(cxB, cyB)
+  ctx.scale(s, s)
+  let y = -blockH / 2 + lineH / 2
+  for (const ln of linesFb) {
+    ctx.fillText(ln, 0, y)
+    y += lineH
   }
-
-  if (ctx.measureText(display).width > maxW) {
-    let t = raw
-    while (t.length > 1 && ctx.measureText(`${t.slice(0, -1)}…`).width > maxW) {
-      t = t.slice(0, -1)
-    }
-    display = t.length > 0 ? `${t}…` : '…'
-  }
-
-  ctx.fillText(display, cx, cy)
   ctx.restore()
 }
 
@@ -190,6 +369,7 @@ export function DodgePage() {
   const [boardLoading, setBoardLoading] = useState(false)
   const [boardError, setBoardError] = useState<string | null>(null)
   const [boardRows, setBoardRows] = useState<DodgeLeaderboardRow[]>([])
+  const [reserveLifeHud, setReserveLifeHud] = useState(false)
 
   const obstaclesRef = useRef<Obstacle[]>([])
   const pxRef = useRef(W / 2)
@@ -201,6 +381,10 @@ export function DodgePage() {
   const frameRef = useRef(0)
   const gameStartMsRef = useRef(0)
   const playerSpriteRef = useRef<HTMLImageElement | null>(null)
+  /** Enintään yksi varaelämä kerrallaan; törmäys normaaliin esteeseen kuluttaa tämän. */
+  const hasReserveLifeRef = useRef(false)
+  /** Kun `distanceRef` ylittää tämän (m), yritetään spawnaa extra-elämäpalikka (jos ei varaa). */
+  const nextExtraLifeAtMetersRef = useRef(380 + Math.random() * 160)
 
   const loadBoard = useCallback(async () => {
     if (!isSupabaseConfigured()) {
@@ -231,7 +415,7 @@ export function DodgePage() {
       const rows = await fetchDodgeLeaderboard(start, end)
       setBoardRows(rows)
     } catch (e: unknown) {
-      setBoardError(e instanceof Error ? e.message : String(e))
+      setBoardError(caughtToUiMessage(e))
       setBoardRows([])
     } finally {
       setBoardLoading(false)
@@ -306,7 +490,7 @@ export function DodgePage() {
       } else {
         ctx.rect(o.x, o.y, o.w, o.h)
       }
-      ctx.fillStyle = OBSTACLE_FILL
+      ctx.fillStyle = o.kind === 'extraLife' ? EXTRA_LIFE_FILL : OBSTACLE_FILL
       ctx.fill()
       drawObstacleLabel(ctx, o, ARENA_BG)
       ctx.beginPath()
@@ -315,8 +499,13 @@ export function DodgePage() {
       } else {
         ctx.rect(o.x, o.y, o.w, o.h)
       }
-      ctx.strokeStyle = o.golive ? '#8b294d' : OBSTACLE_STROKE
-      ctx.lineWidth = o.golive ? 2.5 : 2
+      ctx.strokeStyle =
+        o.kind === 'extraLife'
+          ? EXTRA_LIFE_STROKE
+          : o.kind === 'golive'
+            ? '#8b294d'
+            : OBSTACLE_STROKE
+      ctx.lineWidth = o.kind === 'golive' ? 2.5 : 2
       ctx.stroke()
     }
 
@@ -387,6 +576,8 @@ export function DodgePage() {
     })
     phaseRef.current = 'over'
     setPhase('over')
+    hasReserveLifeRef.current = false
+    setReserveLifeHud(false)
     draw()
   }, [draw])
 
@@ -400,6 +591,9 @@ export function DodgePage() {
     }
 
     obstaclesRef.current = []
+    hasReserveLifeRef.current = false
+    setReserveLifeHud(false)
+    nextExtraLifeAtMetersRef.current = 380 + Math.random() * 160
     distanceRef.current = 0
     spawnCooldownRef.current = 0.15
     lastTsRef.current = 0
@@ -424,9 +618,20 @@ export function DodgePage() {
       const d0 = distanceRef.current
       distanceRef.current += metersPerSecond(d0) * dt
 
-      obstaclesRef.current = obstaclesRef.current
-        .map((o) => ({ ...o, y: o.y + o.vy * dt }))
-        .filter((o) => o.y < H + 80)
+      const moved = obstaclesRef.current.map((o) => ({ ...o, y: o.y + o.vy * dt }))
+      const hadExtraLife = moved.some((o) => o.kind === 'extraLife')
+      obstaclesRef.current = moved.filter((o) => o.y < H + 80)
+      if (
+        hadExtraLife &&
+        !obstaclesRef.current.some((o) => o.kind === 'extraLife') &&
+        !hasReserveLifeRef.current
+      ) {
+        const rndMiss = Math.random
+        nextExtraLifeAtMetersRef.current = Math.min(
+          nextExtraLifeAtMetersRef.current,
+          extraLifeNextSpawnMeters(distanceRef.current, rndMiss),
+        )
+      }
 
       const fall = baseFallSpeed(distanceRef.current)
       spawnCooldownRef.current -= dt
@@ -435,10 +640,21 @@ export function DodgePage() {
         let next: Obstacle
 
         if (rnd() < GOLIVE_SPAWN_P) {
-          const gh = 12 + rnd() * 11
-          const gw = Math.min(W - 8, W * (0.58 + rnd() * 0.32))
-          const gx = clamp(4 + rnd() * Math.max(1, W - gw - 8), 4, W - gw - 4)
+          let gh = 12 + rnd() * 11
+          let gw = Math.min(W - 8, W * (0.58 + rnd() * 0.32))
+          const xr = rnd()
           const gvy = fall * (2.05 + rnd() * 0.55)
+          const sized = growObstacleToFitLabel(
+            GOLIVE_LABEL,
+            gw,
+            gh,
+            W - 8,
+            MAX_OBSTACLE_LABEL_HEIGHT,
+            LABEL_MIN_READABLE_PX,
+          )
+          gw = sized.w
+          gh = sized.h
+          const gx = clampObstacleX(4 + xr * Math.max(1, W - gw - 8), gw)
           next = {
             x: gx,
             y: -gh - 2,
@@ -446,28 +662,93 @@ export function DodgePage() {
             h: gh,
             vy: gvy,
             label: GOLIVE_LABEL,
-            golive: true,
+            kind: 'golive',
           }
         } else {
-          const w = 30 + rnd() * (42 + Math.min(distanceRef.current * 0.1, 38))
-          const h = 16 + rnd() * 22
-          const x = clamp(8 + rnd() * (W - w - 16), 4, W - w - 4)
+          let w = 30 + rnd() * (42 + Math.min(distanceRef.current * 0.1, 38))
+          let h = 16 + rnd() * 22
+          const xr = rnd()
           const vy = fall * (0.82 + rnd() * 0.38)
           const label = pickObstacleLabel(rnd)
-          next = { x, y: -h - 6, w, h, vy, label }
+          const sized = growObstacleToFitLabel(
+            label,
+            w,
+            h,
+            W - 8,
+            MAX_OBSTACLE_LABEL_HEIGHT,
+            LABEL_MIN_READABLE_PX,
+          )
+          w = sized.w
+          h = sized.h
+          const x = clampObstacleX(4 + xr * Math.max(1, W - w - 8), w)
+          next = { x, y: -h - 6, w, h, vy, label, kind: 'normal' as const }
         }
 
         obstaclesRef.current = [...obstaclesRef.current, next]
         spawnCooldownRef.current = spawnIntervalMeters(distanceRef.current)
       }
 
+      const rndExtra = Math.random
+      if (
+        distanceRef.current >= nextExtraLifeAtMetersRef.current &&
+        !hasReserveLifeRef.current &&
+        !obstaclesRef.current.some((o) => o.kind === 'extraLife')
+      ) {
+        let ew = 28 + rndExtra() * 16
+        let eh = 8 + rndExtra() * 5
+        const sizedEx = growObstacleToFitLabel(
+          EXTRA_LIFE_LABEL,
+          ew,
+          eh,
+          W - 8,
+          MAX_OBSTACLE_LABEL_HEIGHT,
+          LABEL_MIN_READABLE_PX,
+        )
+        ew = sizedEx.w
+        eh = sizedEx.h
+        const ex = clampObstacleX(4 + rndExtra() * Math.max(1, W - ew - 8), ew)
+        const evy = fall * (1.48 + rndExtra() * 0.5)
+        obstaclesRef.current = [
+          ...obstaclesRef.current,
+          {
+            x: ex,
+            y: -eh - 2,
+            w: ew,
+            h: eh,
+            vy: evy,
+            label: EXTRA_LIFE_LABEL,
+            kind: 'extraLife',
+          },
+        ]
+        nextExtraLifeAtMetersRef.current = extraLifeNextSpawnMeters(distanceRef.current, rndExtra)
+      }
+
       const px = pxRef.current
       const py = pyRef.current
-      for (const o of obstaclesRef.current) {
-        if (circleHitsRect(px, py, PLAYER_R, o.x, o.y, o.w, o.h)) {
+      const obs = obstaclesRef.current
+      for (let i = 0; i < obs.length; i++) {
+        const o = obs[i]!
+        if (!circleHitsRect(px, py, PLAYER_R, o.x, o.y, o.w, o.h)) continue
+
+        if (o.kind === 'extraLife') {
+          obstaclesRef.current = obs.filter((x) => x !== o)
+          if (!hasReserveLifeRef.current) {
+            hasReserveLifeRef.current = true
+            setReserveLifeHud(true)
+            nextExtraLifeAtMetersRef.current = extraLifeNextSpawnMeters(distanceRef.current, Math.random)
+          }
+          break
+        }
+
+        if (hasReserveLifeRef.current) {
+          hasReserveLifeRef.current = false
+          setReserveLifeHud(false)
+          obstaclesRef.current = obs.filter((x) => x !== o)
+        } else {
           endGame()
           return
         }
+        break
       }
 
       frameRef.current += 1
@@ -520,7 +801,7 @@ export function DodgePage() {
       setPlayedToday(true)
       await loadBoard()
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e)
+      const msg = caughtToUiMessage(e)
       const code = typeof e === 'object' && e !== null && 'code' in e ? String((e as { code: unknown }).code) : ''
       if (code === '23505' || /duplicate|unique/i.test(msg)) {
         setSubmitError('Tällä nimellä on jo tulos tälle päivälle.')
@@ -545,11 +826,11 @@ export function DodgePage() {
   return (
     <div className="app dodge">
       <header className="app-header">
-        <h1>Väistö</h1>
+        <h1>Daily life</h1>
         <p className="dodge__lead">
-          Liikuta hiirtä pelialueella. Esteet putoavat ylhäältä — väistä niin pitkään kuin pystyt. Matka kasvaa
-          metreinä ja tempo kiristyy. Yksi pelikerta päivässä per nimi (UTC {dayKey}); tulos tallennetaan
-          Supabaseen.
+          Daily life — liikuta hiirtä pelialueella. Esteet putoavat ylhäältä; väistä niin pitkään kuin pystyt.
+          Matka kasvaa metreinä ja tempo kiristyy. Yksi pelikerta päivässä per nimi (UTC {dayKey}); tulos
+          tallennetaan Supabaseen.
         </p>
       </header>
 
@@ -570,9 +851,9 @@ export function DodgePage() {
             }}
             placeholder="esim. Maija"
           />
-          {nameError ? (
+              {nameError ? (
             <p className="dodge__error" role="alert">
-              {nameError}
+              {safeUiString(nameError)}
             </p>
           ) : null}
           {supabaseOn && playedToday ? (
@@ -595,8 +876,15 @@ export function DodgePage() {
         <section className="dodge__panel" aria-label="Pelialue">
           {phase === 'playing' ? (
             <div className="dodge__hud" aria-live="polite">
-              <span>Matka</span>
-              <span>{displayM.toFixed(1)} m</span>
+              <span className="dodge__hud-main">
+                <span>Matka</span>
+                <span>{displayM.toFixed(1)} m</span>
+              </span>
+              {reserveLifeHud ? (
+                <span className="dodge__reserve" title="Seuraava osuma kuluttaa varaelämän.">
+                  Varaelämä
+                </span>
+              ) : null}
             </div>
           ) : (
             <p className="dodge__hint">
@@ -608,7 +896,7 @@ export function DodgePage() {
             <canvas
               ref={canvasRef}
               role="img"
-              aria-label="Väistöpeli: liikuta hiirtä väistääksesi tummanpunaisia esteitä"
+              aria-label="Daily life -peli: liikuta hiirtä väistääksesi putoavia esteitä"
               onPointerMove={onPointerMove}
               onPointerDown={(e) => {
                 if (phaseRef.current === 'playing') {
@@ -663,7 +951,7 @@ export function DodgePage() {
                   </button>
                   {submitError ? (
                     <p className="dodge__error" role="alert">
-                      {submitError}
+                      {safeUiString(submitError)}
                     </p>
                   ) : null}
                 </>
@@ -718,7 +1006,7 @@ export function DodgePage() {
           <p className="dodge__hint">Ladataan…</p>
         ) : boardError ? (
           <p className="dodge__error" role="alert">
-            {boardError}
+            {safeUiString(boardError)}
           </p>
         ) : (
           <div className="dodge__table-wrap">
@@ -738,11 +1026,13 @@ export function DodgePage() {
                   </tr>
                 ) : (
                   boardRows.map((row, i) => (
-                    <tr key={`${row.player_name}-${row.day_key}-${row.created_at}`}>
+                    <tr key={`${String(row.player_name)}-${String(row.day_key)}-${String(row.created_at)}`}>
                       <td>{i + 1}</td>
-                      <td>{row.player_name}</td>
-                      <td>{Number(row.distance_m).toFixed(1)} m</td>
-                      <td>{formatRunMs(row.run_ms)}</td>
+                      <td>{safeUiString(row.player_name)}</td>
+                      <td>
+                        {Number.isFinite(row.distance_m) ? `${Number(row.distance_m).toFixed(1)} m` : '—'}
+                      </td>
+                      <td>{Number.isFinite(row.run_ms) ? formatRunMs(row.run_ms) : '—'}</td>
                     </tr>
                   ))
                 )}

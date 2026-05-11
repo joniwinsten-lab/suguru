@@ -45,9 +45,9 @@ Kentät generoidaan `npm run build:pools` → `public/pools/{taso}.json`. Oletuk
 
 Apuna asetteluille: `scripts/solve-layout.mjs` (stdin: JSON `height`, `width`, `regions`) ja `scripts/random-solvable.mjs` (esim. `node scripts/random-solvable.mjs 8 8`).
 
-## Väistö (`#/vaisto`)
+## Daily life (`#/vaisto`)
 
-Hiiren väistöpeli: matka metreinä, vaikeus kasvaa pelin aikana. **Yksi yritys per UTC-päivä per nimi**; tulokset ja top-listat (päivä / viikko / kuukausi / kaikki) **Supabaseen**.
+Hiiren väistöpeli **Daily life**: matka metreinä, vaikeus kasvaa pelin aikana. **Yksi yritys per UTC-päivä per nimi**; tulokset ja top-listat (päivä / viikko / kuukausi / kaikki) **Supabaseen**.
 
 1. Aja SQL: [`supabase/migrations/20260311120000_dodge_game_scores.sql`](supabase/migrations/20260311120000_dodge_game_scores.sql) (SQL-editor tai Supabase CLI). Migraatio poistaa vanhan `team_game_scores`-taulun, jos se on olemassa.
 2. Paikallinen kehitys: kopioi `.env.example` → `.env.local` ja täytä:
