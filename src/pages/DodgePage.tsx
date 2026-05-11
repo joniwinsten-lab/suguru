@@ -1266,7 +1266,7 @@ export function DodgePage() {
               setNameError(null)
               setSubmitOk(false)
             }}
-            placeholder="e.g. Alex"
+            placeholder="e.g. Mikko or Tiina"
           />
               {nameError ? (
             <p className="dodge__error" role="alert">
