@@ -56,12 +56,12 @@ Build (sama Supabase-env kuin pääsivulla):
 npm run build:gh-pages-as
 ```
 
-**Julkaisu repoon `as`:** luo GitHubissa repo `joniwinsten-lab/as`, ota **Pages** käyttöön (lähteenä `gh-pages` / juuri, tai anna Actionsin luoda haara). Suguru-repossa:
+**Julkaisu repoon `as`:** repossa [`joniwinsten-lab/as`](https://github.com/joniwinsten-lab/as) **Pages** → *Deploy from a branch* → **`main`** / juuri (`/`). Staattinen build on `main`-haaran juuressa. Suguru-repossa (automaatio):
 
 1. *Settings → Secrets and variables → Actions* → salaisuus **`AS_SITE_DEPLOY_TOKEN`**: PAT, jolla on **sisältökirjoitus** kohteeseen `joniwinsten-lab/as`.
 2. *Variables* → **`DEPLOY_AS_SITE`** = `true` (ilman tätä workflow vain buildaa ja tallentaa artifactin; deploy-askel ohitetaan).
 
-Push `main`iin ajaa [`.github/workflows/deploy-as-hub.yml`](.github/workflows/deploy-as-hub.yml), joka buildaa `dist-as` ja työntää sen `as`-repoon haaraan `gh-pages`.
+Push `main`iin ajaa [`.github/workflows/deploy-as-hub.yml`](.github/workflows/deploy-as-hub.yml), joka buildaa `dist-as` ja työntää sen `as`-repoon haaraan **`main`** (GitHub Pages julkaisee saman haaran juuren).
 
 ## Tasot
 

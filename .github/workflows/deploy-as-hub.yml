@@ -1,8 +1,8 @@
 name: Deploy AS games hub (github.io/as)
 
 # Julkaisee `dist-as`-buildin repoon joniwinsten-lab/as (GitHub Pages).
-# Vaatii: tyhjä tai gh-pages -valmis repo `as`, salaisuus AS_SITE_DEPLOY_TOKEN,
-# ja repomuuttujan DEPLOY_AS_SITE=true (suguru-repo → Settings → Variables).
+# Vaatii: repo `as`, Pages lähteenä main / (root). Salaisuuksina AS_SITE_DEPLOY_TOKEN,
+# repomuuttuja DEPLOY_AS_SITE=true (suguru-repo → Settings → Variables).
 
 on:
   push:
@@ -49,11 +49,11 @@ jobs:
           name: dist-as
           path: dist-as
 
-      - name: Push to joniwinsten-lab/as (gh-pages)
+      - name: Push to joniwinsten-lab/as (main → GitHub Pages)
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: dist-as
-          branch: gh-pages
+          branch: main
           repository-name: joniwinsten-lab/as
           token: ${{ secrets.AS_SITE_DEPLOY_TOKEN }}
           clean: true

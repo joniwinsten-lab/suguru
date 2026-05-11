@@ -13,4 +13,5 @@ if (!fs.existsSync(from)) {
   process.exit(1)
 }
 fs.renameSync(from, to)
-console.log('rename-as-index: dist-as/index.html OK')
+fs.writeFileSync(path.join(dir, '.nojekyll'), '')
+console.log('rename-as-index: dist-as/index.html + .nojekyll OK')
