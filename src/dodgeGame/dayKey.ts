@@ -1,4 +1,4 @@
-/** UTC-päivä `YYYY-MM-DD` (sama haaste kaikille samana kalenteripäivänä UTC:ssä). */
+/** UTC-päivä `YYYY-MM-DD`. */
 export function utcDayKey(d = new Date()): string {
   return d.toISOString().slice(0, 10)
 }

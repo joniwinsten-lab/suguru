@@ -88,3 +88,83 @@
   color: var(--muted);
   margin: 0.5rem 0 0;
 }
+
+.dodge__label {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+.dodge__input {
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font: inherit;
+  margin-bottom: 0.65rem;
+}
+
+.dodge__error {
+  color: var(--danger);
+  font-size: 0.88rem;
+  margin: 0 0 0.5rem;
+}
+
+.dodge__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dodge__btn--ghost {
+  margin-top: 0.5rem;
+  background: transparent;
+}
+
+.dodge__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.65rem;
+}
+
+.dodge__tab {
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.dodge__tab.is-active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.dodge__table-wrap {
+  overflow-x: auto;
+}
+
+.dodge__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.dodge__table th,
+.dodge__table td {
+  padding: 0.35rem 0.4rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.dodge__table th {
+  color: var(--muted);
+  font-weight: 600;
+}

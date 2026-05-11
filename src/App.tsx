@@ -1,8 +1,7 @@
 import { HashRouter, NavLink, Route, Routes } from 'react-router-dom'
+import { DodgePage } from './pages/DodgePage'
 import { SanuliPage } from './pages/SanuliPage'
 import { SuguruPage } from './pages/SuguruPage'
-import { DodgePage } from './pages/DodgePage'
-import { TeamDailyPage } from './pages/TeamDailyPage'
 import './App.css'
 
 /** Hash-reititys: GitHub Pages ei ohjaa /sanuli-polkuja SPA:lle (#/sanuli toimii ilman 404.html-temppua). */
@@ -16,9 +15,6 @@ export default function App() {
         <NavLink className="site-nav__link" to="/sanuli">
           Sanuli
         </NavLink>
-        <NavLink className="site-nav__link" to="/tiimi">
-          Tiimi
-        </NavLink>
         <NavLink className="site-nav__link" to="/vaisto">
           Väistö
         </NavLink>
@@ -26,7 +22,6 @@ export default function App() {
       <Routes>
         <Route path="/" element={<SuguruPage />} />
         <Route path="/sanuli" element={<SanuliPage />} />
-        <Route path="/tiimi" element={<TeamDailyPage />} />
         <Route path="/vaisto" element={<DodgePage />} />
       </Routes>
     </HashRouter>

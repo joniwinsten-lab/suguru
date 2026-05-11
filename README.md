@@ -45,20 +45,20 @@ Kentät generoidaan `npm run build:pools` → `public/pools/{taso}.json`. Oletuk
 
 Apuna asetteluille: `scripts/solve-layout.mjs` (stdin: JSON `height`, `width`, `regions`) ja `scripts/random-solvable.mjs` (esim. `node scripts/random-solvable.mjs 8 8`).
 
-## Tiimin päiväpeli (`#/tiimi`)
+## Väistö (`#/vaisto`)
 
-Lyhyt selainpohjainen minipeli (reaktio + tarkkuus), sama päivän haaste kaikille **UTC-päivämäärän** perusteella. Tulokset ja top-listat (päivä / viikko / kuukausi / all-time) tallennetaan **Supabaseen**.
+Hiiren väistöpeli: matka metreinä, vaikeus kasvaa pelin aikana. **Yksi yritys per UTC-päivä per nimi**; tulokset ja top-listat (päivä / viikko / kuukausi / kaikki) **Supabaseen**.
 
-1. Luo Supabase-projekti ja aja SQL: [`supabase/migrations/20260206120000_team_game_scores.sql`](supabase/migrations/20260206120000_team_game_scores.sql) (SQL-editor tai Supabase CLI).
+1. Aja SQL: [`supabase/migrations/20260311120000_dodge_game_scores.sql`](supabase/migrations/20260311120000_dodge_game_scores.sql) (SQL-editor tai Supabase CLI). Migraatio poistaa vanhan `team_game_scores`-taulun, jos se on olemassa.
 2. Paikallinen kehitys: kopioi `.env.example` → `.env.local` ja täytä:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
-3. GitHub Actions / Pages: lisää repoon *Secrets* `VITE_SUPABASE_URL` ja `VITE_SUPABASE_ANON_KEY`, jotta build upottaa ne tuotantoon (katso [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml)).
+3. GitHub Actions / Pages: *Secrets* `VITE_SUPABASE_URL` ja `VITE_SUPABASE_ANON_KEY` (katso [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml)).
 
 Ilman näitä muuttujia peli toimii, mutta tulosten lähetys ja top-listat eivät ole käytössä.
 
-**Seuraavat askeleet (tuotanto):**
+**Tuotanto:**
 
-1. Varmista Supabase-projektissa, että migraatio on ajettu (taulu `team_game_scores` + funktio `get_team_leaderboard`). SQL-tiedosto: [`supabase/migrations/20260206120000_team_game_scores.sql`](supabase/migrations/20260206120000_team_game_scores.sql).
-2. GitHub: *Settings → Secrets and variables → Actions → New repository secret* — lisää **`VITE_SUPABASE_URL`** ja **`VITE_SUPABASE_ANON_KEY`** (Project URL + `anon` `public` -avain Supabasesta). Sitten uusi push `main`-haaraan, jotta Pages-build saa avaimet mukaan.
-3. Paikallinen dev: kopioi arvot `.env.local`-tiedostoon (katso `.env.example`; `*.local` ei mene gittiin).
+1. Varmista Supabasessa taulu `dodge_game_scores` sekä funktiot `get_dodge_leaderboard` ja `dodge_already_played`.
+2. GitHub *Settings → Secrets and variables → Actions* — `VITE_SUPABASE_URL` ja `VITE_SUPABASE_ANON_KEY`, sitten push `main`-haaraan.
+3. Paikallinen dev: arvot `.env.local`-tiedostoon (`*.local` ei mene gittiin).
