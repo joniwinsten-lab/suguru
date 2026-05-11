@@ -16,7 +16,7 @@ export default function App() {
           Sanuli
         </NavLink>
         <NavLink className="site-nav__link" to="/vaisto">
-          Daily life
+          AS Daily life
         </NavLink>
       </nav>
       <Routes>

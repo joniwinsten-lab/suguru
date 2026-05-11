@@ -1,4 +1,4 @@
--- Daily life: dodge_game_scores + leaderboard-RPC:t.
+-- AS Daily life: dodge_game_scores + leaderboard-RPC:t.
 -- Aja tämä Supabase SQL Editorissa tai: supabase db push (oikeaan projektiin).
 -- Ei poista team_game_scores -taulua (vanha 20260311-migraatio teki sen erikseen).
 
@@ -93,7 +93,7 @@ $$;
 
 grant execute on function public.dodge_already_played(date, text) to anon, authenticated;
 
-comment on table public.dodge_game_scores is 'Daily life: yksi yritys per pelaaja per UTC-päivä (unique).';
+comment on table public.dodge_game_scores is 'AS Daily life: yksi yritys per pelaaja per UTC-päivä (unique).';
 
 -- PostgREST / API -skeemavälimuisti (PGRST202 "not in schema cache")
 notify pgrst, 'reload schema';

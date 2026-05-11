@@ -839,9 +839,9 @@ export function DodgePage() {
   return (
     <div className={`app dodge${phase === 'playing' ? ' dodge--playing-mobile' : ''}`}>
       <header className="app-header">
-        <h1>Daily life</h1>
+        <h1>AS Daily life</h1>
         <p className="dodge__lead">
-          Daily life — liikuta hiirtä pelialueella. Esteet putoavat ylhäältä; väistä niin pitkään kuin pystyt.
+          AS Daily life — liikuta hiirtä pelialueella. Esteet putoavat ylhäältä; väistä niin pitkään kuin pystyt.
           Matka kasvaa metreinä ja tempo kiristyy. Yksi pelikerta päivässä per nimi (UTC {dayKey}); tulos
           tallennetaan Supabaseen.
         </p>
@@ -909,7 +909,7 @@ export function DodgePage() {
             <canvas
               ref={canvasRef}
               role="img"
-              aria-label="Daily life -peli: liikuta hiirtä väistääksesi putoavia esteitä"
+              aria-label="AS Daily life -peli: liikuta hiirtä väistääksesi putoavia esteitä"
               onPointerMove={onPointerMove}
               onPointerDown={(e) => {
                 if (phaseRef.current === 'playing') {
