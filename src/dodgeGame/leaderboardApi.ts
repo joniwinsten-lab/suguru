@@ -81,15 +81,75 @@ export async function submitDodgeScore(payload: DodgeSubmitPayload): Promise<voi
   if (error) throw new Error(errorToReadableString(error))
 }
 
-export async function dodgeAlreadyPlayed(dayKey: string, playerName: string): Promise<boolean> {
+export type DodgeDailyQuota = {
+  submitted: boolean
+  attempts_used: number
+  attempts_max: number
+  can_start: boolean
+}
+
+function parseQuotaJson(data: unknown): DodgeDailyQuota {
+  const o = data && typeof data === 'object' ? (data as Record<string, unknown>) : {}
+  const max = Math.max(1, Math.round(toNum(o.attempts_max)) || 3)
+  const used = Math.min(max, Math.max(0, Math.round(toNum(o.attempts_used))))
+  return {
+    submitted: Boolean(o.submitted),
+    attempts_used: used,
+    attempts_max: max,
+    can_start: Boolean(o.can_start),
+  }
+}
+
+export async function fetchDodgeDailyQuota(dayKey: string, playerName: string): Promise<DodgeDailyQuota> {
   const sb = getSupabase()
   const pDay = String(dayKey ?? '').slice(0, 10)
   const pName = String(playerName ?? '').trim()
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(pDay) || pName.length === 0) return false
-  const { data, error } = await sb.rpc('dodge_already_played', {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(pDay) || pName.length === 0) {
+    return { submitted: false, attempts_used: 0, attempts_max: 3, can_start: false }
+  }
+  const { data, error } = await sb.rpc('dodge_daily_quota', {
     p_day: pDay,
     p_name: pName,
   })
   if (error) throw new Error(errorToReadableString(error))
-  return Boolean(data)
+  return parseQuotaJson(data)
+}
+
+export type DodgeBeginAttemptResult = {
+  ok: boolean
+  attempts_used?: number
+  attempts_remaining?: number
+  error?: string
+}
+
+function parseBeginJson(data: unknown): DodgeBeginAttemptResult {
+  const o = data && typeof data === 'object' ? (data as Record<string, unknown>) : {}
+  const err = o.error
+  return {
+    ok: Boolean(o.ok),
+    attempts_used: o.attempts_used != null ? Math.round(toNum(o.attempts_used)) : undefined,
+    attempts_remaining: o.attempts_remaining != null ? Math.round(toNum(o.attempts_remaining)) : undefined,
+    error: typeof err === 'string' ? err : undefined,
+  }
+}
+
+export async function beginDodgeAttempt(dayKey: string, playerName: string): Promise<DodgeBeginAttemptResult> {
+  const sb = getSupabase()
+  const pDay = String(dayKey ?? '').slice(0, 10)
+  const pName = String(playerName ?? '').trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(pDay) || pName.length === 0) {
+    return { ok: false, error: 'invalid_name' }
+  }
+  const { data, error } = await sb.rpc('dodge_begin_attempt', {
+    p_day: pDay,
+    p_name: pName,
+  })
+  if (error) throw new Error(errorToReadableString(error))
+  return parseBeginJson(data)
+}
+
+/** @deprecated Käytä fetchDodgeDailyQuota; sama kuin quota.submitted */
+export async function dodgeAlreadyPlayed(dayKey: string, playerName: string): Promise<boolean> {
+  const q = await fetchDodgeDailyQuota(dayKey, playerName)
+  return q.submitted
 }

@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { circleHitsRect } from '../dodgeGame/collision'
 import { utcDayKey } from '../dodgeGame/dayKey'
 import {
-  dodgeAlreadyPlayed,
+  beginDodgeAttempt,
+  fetchDodgeDailyQuota,
   fetchDodgeLeaderboard,
   submitDodgeScore,
   type DodgeLeaderboardRow,
@@ -16,6 +17,61 @@ import reviseUrl from '../assets/dodge-brands/revise.png'
 import sprintitUrl from '../assets/dodge-brands/sprintit.png'
 import playerSpriteUrl from '../assets/dodge-player.jpg'
 import './DodgePage.css'
+
+const DODGE_PENDING_KEY = 'dodge_pending_score_v1'
+
+type DodgePendingPayload = {
+  dayKey: string
+  nameNorm: string
+  distanceM: number
+  runMs: number
+}
+
+function writeDodgePendingScore(p: DodgePendingPayload) {
+  try {
+    sessionStorage.setItem(DODGE_PENDING_KEY, JSON.stringify(p))
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
+function readDodgePendingScore(dayKey: string, trimmedName: string): DodgePendingPayload | null {
+  try {
+    const raw = sessionStorage.getItem(DODGE_PENDING_KEY)
+    if (!raw) return null
+    const o = JSON.parse(raw) as Partial<DodgePendingPayload>
+    const nn = trimmedName.trim().toLowerCase()
+    if (typeof o.dayKey !== 'string' || o.dayKey !== dayKey) return null
+    if (typeof o.nameNorm !== 'string' || o.nameNorm !== nn) return null
+    const distanceM =
+      typeof o.distanceM === 'number' && Number.isFinite(o.distanceM) ? o.distanceM : 0
+    const runMs = typeof o.runMs === 'number' && Number.isFinite(o.runMs) ? Math.max(0, Math.round(o.runMs)) : 0
+    return { dayKey: o.dayKey, nameNorm: o.nameNorm, distanceM, runMs }
+  } catch {
+    return null
+  }
+}
+
+function clearDodgePendingScore() {
+  try {
+    sessionStorage.removeItem(DODGE_PENDING_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+function dodgeBeginErrorMessage(code: string | undefined): string {
+  switch (code) {
+    case 'already_submitted':
+      return 'Olet jo lähettänyt tuloksen tälle päivälle. Uusi peli on mahdollista huomenna.'
+    case 'no_attempts':
+      return 'Kaikki kolme yritystä on jo käytetty. Lähetä tulos tai yritä uudelleen huomenna.'
+    case 'invalid_name':
+      return 'Tarkista nimi (1–32 merkkiä).'
+    default:
+      return 'Pelin aloitus epäonnistui. Yritä uudelleen.'
+  }
+}
 
 const W = 360
 const H = 600
@@ -475,8 +531,13 @@ export function DodgePage() {
 
   const [name, setName] = useState('')
   const [nameError, setNameError] = useState<string | null>(null)
-  const [playedToday, setPlayedToday] = useState(false)
+  const [scoreSubmittedToday, setScoreSubmittedToday] = useState(false)
+  const [attemptsUsed, setAttemptsUsed] = useState(0)
+  const [attemptsMax, setAttemptsMax] = useState(3)
+  const [quotaLoaded, setQuotaLoaded] = useState(!isSupabaseConfigured())
   const [playedCheckLoading, setPlayedCheckLoading] = useState(false)
+  const [beginAttemptLoading, setBeginAttemptLoading] = useState(false)
+  const [lobbyPending, setLobbyPending] = useState<DodgePendingPayload | null>(null)
 
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitOk, setSubmitOk] = useState(false)
@@ -527,6 +588,36 @@ export function DodgePage() {
     }
   }, [tab, dayKey])
 
+  const refreshQuota = useCallback(async () => {
+    if (!isSupabaseConfigured()) {
+      setQuotaLoaded(true)
+      setScoreSubmittedToday(false)
+      setAttemptsUsed(0)
+      setAttemptsMax(3)
+      return
+    }
+    const trimmed = name.trim()
+    if (!trimmed) {
+      setQuotaLoaded(true)
+      setScoreSubmittedToday(false)
+      setAttemptsUsed(0)
+      setAttemptsMax(3)
+      return
+    }
+    try {
+      const q = await fetchDodgeDailyQuota(dayKey, trimmed)
+      setScoreSubmittedToday(q.submitted)
+      setAttemptsUsed(q.attempts_used)
+      setAttemptsMax(q.attempts_max)
+    } catch {
+      setScoreSubmittedToday(false)
+      setAttemptsUsed(0)
+      setAttemptsMax(3)
+    } finally {
+      setQuotaLoaded(true)
+    }
+  }, [dayKey, name])
+
   useEffect(() => {
     const t = window.setTimeout(() => {
       void loadBoard()
@@ -539,26 +630,48 @@ export function DodgePage() {
     let innerDebounce: number | undefined
     const outer = window.setTimeout(() => {
       if (!isSupabaseConfigured()) {
-        if (!cancelled) setPlayedToday(false)
+        if (!cancelled) {
+          setScoreSubmittedToday(false)
+          setAttemptsUsed(0)
+          setAttemptsMax(3)
+          setQuotaLoaded(true)
+        }
         return
       }
       const trimmed = name.trim()
       if (trimmed.length === 0) {
-        if (!cancelled) setPlayedToday(false)
+        if (!cancelled) {
+          setScoreSubmittedToday(false)
+          setAttemptsUsed(0)
+          setAttemptsMax(3)
+          setQuotaLoaded(true)
+        }
         return
       }
       innerDebounce = window.setTimeout(() => {
         if (cancelled) return
         setPlayedCheckLoading(true)
-        void dodgeAlreadyPlayed(dayKey, trimmed)
-          .then((played) => {
-            if (!cancelled) setPlayedToday(played)
+        setQuotaLoaded(false)
+        void fetchDodgeDailyQuota(dayKey, trimmed)
+          .then((q) => {
+            if (!cancelled) {
+              setScoreSubmittedToday(q.submitted)
+              setAttemptsUsed(q.attempts_used)
+              setAttemptsMax(q.attempts_max)
+            }
           })
           .catch(() => {
-            if (!cancelled) setPlayedToday(false)
+            if (!cancelled) {
+              setScoreSubmittedToday(false)
+              setAttemptsUsed(0)
+              setAttemptsMax(3)
+            }
           })
           .finally(() => {
-            if (!cancelled) setPlayedCheckLoading(false)
+            if (!cancelled) {
+              setPlayedCheckLoading(false)
+              setQuotaLoaded(true)
+            }
           })
       }, 400)
     }, 0)
@@ -568,6 +681,16 @@ export function DodgePage() {
       if (innerDebounce !== undefined) window.clearTimeout(innerDebounce)
     }
   }, [name, dayKey])
+
+  useEffect(() => {
+    if (phase !== 'lobby') return
+    const t = name.trim()
+    if (!t || !isSupabaseConfigured()) {
+      setLobbyPending(null)
+      return
+    }
+    setLobbyPending(readDodgePendingScore(dayKey, t))
+  }, [phase, dayKey, name, scoreSubmittedToday, attemptsUsed, quotaLoaded])
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current
@@ -749,16 +872,44 @@ export function DodgePage() {
     hasReserveLifeRef.current = false
     setReserveLifeHud(false)
     lifeSparksRef.current = []
+    writeDodgePendingScore({
+      dayKey,
+      nameNorm: name.trim().toLowerCase(),
+      distanceM: d,
+      runMs,
+    })
     draw()
-  }, [draw])
+  }, [draw, dayKey, name])
 
-  const start = useCallback(() => {
+  const start = useCallback(async () => {
     const err = validatePlayerName(name)
     setNameError(err)
     if (err) return
-    if (isSupabaseConfigured() && playedToday) {
-      setNameError('Olet jo pelannut tänään tällä nimellä.')
-      return
+    const trimmed = name.trim()
+    setSubmitError(null)
+    if (isSupabaseConfigured()) {
+      if (scoreSubmittedToday) {
+        setNameError('Olet jo lähettänyt tuloksen tälle päivälle. Uusi peli on mahdollista huomenna.')
+        return
+      }
+      if (attemptsUsed >= attemptsMax) {
+        setNameError('Kaikki yritykset on käytetty. Lähetä tulos tai yritä uudelleen huomenna.')
+        return
+      }
+      setBeginAttemptLoading(true)
+      try {
+        const r = await beginDodgeAttempt(dayKey, trimmed)
+        if (!r.ok) {
+          setNameError(dodgeBeginErrorMessage(r.error))
+          return
+        }
+        if (r.attempts_used != null) setAttemptsUsed(r.attempts_used)
+      } catch (e: unknown) {
+        setNameError(caughtToUiMessage(e))
+        return
+      } finally {
+        setBeginAttemptLoading(false)
+      }
     }
 
     obstaclesRef.current = []
@@ -970,7 +1121,7 @@ export function DodgePage() {
     }
 
     rafRef.current = requestAnimationFrame(gameTick)
-  }, [draw, endGame, name, playedToday])
+  }, [attemptsMax, attemptsUsed, dayKey, draw, endGame, name, scoreSubmittedToday])
 
   useEffect(() => {
     return () => {
@@ -1018,8 +1169,44 @@ export function DodgePage() {
         runMs: finalRunMs,
       })
       setSubmitOk(true)
-      setPlayedToday(true)
+      clearDodgePendingScore()
       await loadBoard()
+      await refreshQuota()
+    } catch (e: unknown) {
+      const msg = caughtToUiMessage(e)
+      const code = typeof e === 'object' && e !== null && 'code' in e ? String((e as { code: unknown }).code) : ''
+      if (code === '23505' || /duplicate|unique/i.test(msg)) {
+        setSubmitError('Tällä nimellä on jo tulos tälle päivälle.')
+      } else {
+        setSubmitError(msg)
+      }
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const onSubmitLobbyPending = async () => {
+    if (!isSupabaseConfigured()) return
+    const trimmed = name.trim()
+    const p = readDodgePendingScore(dayKey, trimmed)
+    if (!p) {
+      setSubmitError('Ei tallennettua tulosta lähetettäväksi. Pelaa uusi kierros tai päivitä sivu.')
+      return
+    }
+    setSubmitting(true)
+    setSubmitError(null)
+    try {
+      await submitDodgeScore({
+        playerName: trimmed,
+        dayKey,
+        distanceM: p.distanceM,
+        runMs: p.runMs,
+      })
+      setSubmitOk(true)
+      clearDodgePendingScore()
+      setLobbyPending(null)
+      await loadBoard()
+      await refreshQuota()
     } catch (e: unknown) {
       const msg = caughtToUiMessage(e)
       const code = typeof e === 'object' && e !== null && 'code' in e ? String((e as { code: unknown }).code) : ''
@@ -1038,10 +1225,18 @@ export function DodgePage() {
     phaseRef.current = 'lobby'
     setSubmitOk(false)
     setSubmitError(null)
+    void refreshQuota()
   }
 
   const supabaseOn = isSupabaseConfigured()
-  const startBlocked = supabaseOn && (playedToday || playedCheckLoading)
+  const noAttemptsLeft = attemptsUsed >= attemptsMax && !scoreSubmittedToday
+  const startBlocked =
+    supabaseOn &&
+    (!quotaLoaded ||
+      playedCheckLoading ||
+      beginAttemptLoading ||
+      scoreSubmittedToday ||
+      attemptsUsed >= attemptsMax)
 
   return (
     <div className={`app dodge${phase === 'playing' ? ' dodge--playing-mobile' : ''}`}>
@@ -1049,8 +1244,9 @@ export function DodgePage() {
         <h1>AS Daily life</h1>
         <p className="dodge__lead">
           AS Daily life — liikuta hiirtä pelialueella. Esteet putoavat ylhäältä; väistä niin pitkään kuin pystyt.
-          Matka kasvaa metreinä ja tempo kiristyy. Yksi pelikerta päivässä per nimi (UTC {dayKey}); tulos
-          tallennetaan Supabaseen.
+          Matka kasvaa metreinä ja tempo kiristyy. Enintään kolme pelikertaa päivässä per nimi (UTC {dayKey});
+          tuloksen voi lähettää listoille kerran päivässä, ja lähetyksen jälkeen uusi peli on mahdollista
+          vasta seuraavana päivänä. Tulos tallennetaan Supabaseen.
         </p>
       </header>
 
@@ -1068,6 +1264,7 @@ export function DodgePage() {
             onChange={(e) => {
               setName(e.target.value)
               setNameError(null)
+              setSubmitOk(false)
             }}
             placeholder="esim. Maija"
           />
@@ -1076,18 +1273,56 @@ export function DodgePage() {
               {safeUiString(nameError)}
             </p>
           ) : null}
-          {supabaseOn && playedToday ? (
+          {supabaseOn && quotaLoaded && name.trim() && scoreSubmittedToday ? (
             <p className="dodge__hint" role="status">
-              Olet jo pelannut tänään tällä nimellä. Huomenna uusi yritys.
+              Olet jo lähettänyt tuloksen tälle päivälle tällä nimellä. Uusi peli on mahdollista huomenna.
+            </p>
+          ) : null}
+          {supabaseOn && quotaLoaded && name.trim() && !scoreSubmittedToday ? (
+            <p className="dodge__hint" role="status">
+              Yritykset tänään: {attemptsUsed} / {attemptsMax}. Tuloksen voi lähettää vain kerran; kun olet
+              lähettänyt, et voi enää aloittaa uutta peliä tälle päivälle.
+            </p>
+          ) : null}
+          {supabaseOn && noAttemptsLeft && lobbyPending && !scoreSubmittedToday ? (
+            <div className="dodge__lobby-pending" style={{ marginTop: '0.65rem' }}>
+              <p className="dodge__hint" role="status">
+                Viimeisin tallennettu tulos: <strong>{lobbyPending.distanceM.toFixed(1)} m</strong> · aika{' '}
+                {formatRunMs(lobbyPending.runMs)}. Kolme yritystä on käytetty — lähetä tämä tulos tai yritä
+                uudelleen huomenna.
+              </p>
+              <button
+                type="button"
+                className="dodge__btn dodge__btn--primary"
+                style={{ marginTop: '0.35rem' }}
+                disabled={submitting}
+                onClick={() => void onSubmitLobbyPending()}
+              >
+                {submitting ? 'Lähetetään…' : 'Lähetä tallennettu tulos'}
+              </button>
+              {submitError ? (
+                <p className="dodge__error" role="alert">
+                  {safeUiString(submitError)}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+          {phase === 'lobby' && submitOk ? (
+            <p className="dodge__hint" role="status" style={{ marginTop: '0.5rem' }}>
+              Tulos tallennettu. Kiitos pelistä!
             </p>
           ) : null}
           <button
             type="button"
             className="dodge__btn dodge__btn--primary"
             disabled={startBlocked}
-            onClick={() => start()}
+            onClick={() => void start()}
           >
-            {playedCheckLoading ? 'Tarkistetaan…' : 'Aloita peli'}
+            {playedCheckLoading
+              ? 'Tarkistetaan…'
+              : beginAttemptLoading
+                ? 'Varataan pelikertaa…'
+                : 'Aloita peli'}
           </button>
         </section>
       ) : null}
@@ -1170,17 +1405,29 @@ export function DodgePage() {
               {supabaseOn && !submitOk ? (
                 <>
                   <p className="dodge__hint" style={{ marginTop: '0.65rem' }}>
-                    Lähetä tulos listoihin (vain kerran / päivä / nimi).
+                    Lähetä tämä tulos listoihin (enintään kerran / päivä / nimi). Voit myös yrittää uudelleen,
+                    jos sinulla on yrityksiä jäljellä tänään.
                   </p>
                   <button
                     type="button"
                     className="dodge__btn dodge__btn--primary"
                     style={{ marginTop: '0.35rem' }}
-                    disabled={submitting}
+                    disabled={submitting || beginAttemptLoading}
                     onClick={() => void onSubmit()}
                   >
                     {submitting ? 'Lähetetään…' : 'Lähetä tulos'}
                   </button>
+                  {!scoreSubmittedToday && attemptsUsed < attemptsMax ? (
+                    <button
+                      type="button"
+                      className="dodge__btn"
+                      style={{ marginTop: '0.5rem' }}
+                      disabled={submitting || beginAttemptLoading}
+                      onClick={() => void start()}
+                    >
+                      {beginAttemptLoading ? 'Varataan…' : 'Pelaa uudelleen'}
+                    </button>
+                  ) : null}
                   {submitError ? (
                     <p className="dodge__error" role="alert">
                       {safeUiString(submitError)}

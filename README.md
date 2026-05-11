@@ -71,10 +71,11 @@ Apuna asetteluille: `scripts/solve-layout.mjs` (stdin: JSON `height`, `width`, `
 
 ## AS Daily life (`#/as-daily-life`)
 
-Hiiren väistöpeli **AS Daily life**: matka metreinä, vaikeus kasvaa pelin aikana. **Yksi yritys per UTC-päivä per nimi**; tulokset ja top-listat (päivä / viikko / kuukausi / kaikki) **Supabaseen**.
+Hiiren väistöpeli **AS Daily life**: matka metreinä, vaikeus kasvaa pelin aikana. **Enintään kolme pelikertaa per UTC-päivä per nimi**; **tuloksen voi lähettää listoille kerran päivässä**, ja lähetyksen jälkeen uusi peli on mahdollista vasta seuraavana päivänä. Top-listat (päivä / viikko / kuukausi / kaikki) **Supabaseen**.
 
 1. **Supabase (pakollinen top-listoille):** aja SQL projektiin, jonka `VITE_SUPABASE_URL` osoittaa:
-   - uusi idempotentti migraatio: [`supabase/migrations/20260511193000_dodge_daily_life_leaderboard.sql`](supabase/migrations/20260511193000_dodge_daily_life_leaderboard.sql)  
+   - [`supabase/migrations/20260511193000_dodge_daily_life_leaderboard.sql`](supabase/migrations/20260511193000_dodge_daily_life_leaderboard.sql) (pohja + listat), **ja**
+   - [`supabase/migrations/20260511193100_dodge_three_attempts_one_submit.sql`](supabase/migrations/20260511193100_dodge_three_attempts_one_submit.sql) (kolme yritystä / päivä, yksi lähetys, RPC:t `dodge_daily_quota` ja `dodge_begin_attempt`),  
      (SQL Editor *tai* `supabase link` + `supabase db push`), **tai**
    - vanha migraatio [`20260311120000_dodge_game_scores.sql`](supabase/migrations/20260311120000_dodge_game_scores.sql) (poistaa mahdollisen `team_game_scores`-taulun — älä käytä, jos sama DB on muussa käytössä).
 2. Jos virhe on **Could not find the function … get_dodge_leaderboard … in the schema cache**: funktio puuttuu tai PostgREST-välimuisti on vanha. Aja yllä oleva SQL (sisältää `notify pgrst, 'reload schema'`), tai Dashboardissa **Project Settings → API → Restart** / uudelleenjulkaisu.
@@ -87,6 +88,6 @@ Ilman näitä muuttujia peli toimii, mutta tulosten lähetys ja top-listat eivä
 
 **Tuotanto:**
 
-1. Varmista Supabasessa taulu `dodge_game_scores` sekä funktiot `get_dodge_leaderboard` ja `dodge_already_played` (ks. migraatiot yllä).
+1. Varmista Supabasessa taulu `dodge_game_scores`, tarvittaessa `dodge_daily_attempts`, sekä funktiot `get_dodge_leaderboard`, `dodge_daily_quota`, `dodge_begin_attempt` ja `dodge_already_played` (ks. migraatiot yllä).
 2. GitHub *Settings → Secrets and variables → Actions* — `VITE_SUPABASE_URL` ja `VITE_SUPABASE_ANON_KEY`, sitten push `main`-haaraan.
 3. Paikallinen dev: arvot `.env.local`-tiedostoon (`*.local` ei mene gittiin).
