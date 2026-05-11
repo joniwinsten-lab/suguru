@@ -49,6 +49,18 @@ jobs:
           name: dist-as
           path: dist-as
 
+      - name: README (mukana clean-deployissa)
+        run: |
+          printf '%s\n' \
+            '# as' \
+            '' \
+            'Staattinen pelisivu: **Sanuli** ja **AS Daily life**.' \
+            '' \
+            '→ https://joniwinsten-lab.github.io/as/' \
+            '' \
+            'Lähdekoodi: https://github.com/joniwinsten-lab/suguru' \
+            > dist-as/README.md
+
       - name: Push to joniwinsten-lab/as (main → GitHub Pages)
         uses: JamesIves/github-pages-deploy-action@v4
         with:
