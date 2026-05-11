@@ -53,39 +53,50 @@ function pickObstacleLabel(rng: () => number): string {
 }
 
 function drawObstacleLabel(ctx: CanvasRenderingContext2D, o: Obstacle, textColor: string) {
-  const padX = 4
+  const padX = 3
   const padY = 2
   const maxW = o.w - padX * 2
   const maxH = o.h - padY * 2
-  if (maxW < 6 || maxH < 8) return
+  if (maxW < 8 || maxH < 10) return
 
+  const raw = o.label?.trim() || '?'
   ctx.save()
+  ctx.beginPath()
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(o.x, o.y, o.w, o.h, 4)
+  } else {
+    ctx.rect(o.x, o.y, o.w, o.h)
+  }
+  ctx.clip()
+
   ctx.fillStyle = textColor
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  let fontPx = Math.min(12, maxH * 0.44)
-  const minPx = 6.5
+  const cx = o.x + o.w / 2
+  const cy = o.y + o.h / 2
+
+  let fontPx = Math.min(12, Math.max(9, Math.floor(maxH * 0.42)))
+  let display = raw
 
   const setFont = (px: number) => {
-    ctx.font = `600 ${px}px system-ui, -apple-system, Segoe UI, sans-serif`
+    ctx.font = `bold ${px}px system-ui, -apple-system, "Segoe UI", sans-serif`
   }
 
-  setFont(fontPx)
-  while (fontPx > minPx && ctx.measureText(o.label).width > maxW) {
-    fontPx -= 0.5
+  for (;;) {
     setFont(fontPx)
+    if (ctx.measureText(display).width <= maxW || fontPx <= 8) break
+    fontPx -= 1
   }
 
-  let line = o.label
-  if (ctx.measureText(line).width > maxW) {
-    let t = o.label
-    while (t.length > 0 && ctx.measureText(`${t}…`).width > maxW) {
+  if (ctx.measureText(display).width > maxW) {
+    let t = raw
+    while (t.length > 1 && ctx.measureText(`${t.slice(0, -1)}…`).width > maxW) {
       t = t.slice(0, -1)
     }
-    line = t.length > 0 ? `${t}…` : '…'
+    display = t.length > 0 ? `${t}…` : '…'
   }
 
-  ctx.fillText(line, o.x + o.w / 2, o.y + o.h / 2)
+  ctx.fillText(display, cx, cy)
   ctx.restore()
 }
 
@@ -100,29 +111,6 @@ function readBest(): number {
   } catch {
     return 0
   }
-}
-
-function strokeFilledRoundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-  fillStyle: string,
-  strokeStyle: string,
-) {
-  ctx.fillStyle = fillStyle
-  ctx.strokeStyle = strokeStyle
-  ctx.lineWidth = 2
-  ctx.beginPath()
-  if (typeof ctx.roundRect === 'function') {
-    ctx.roundRect(x, y, w, h, r)
-  } else {
-    ctx.rect(x, y, w, h)
-  }
-  ctx.fill()
-  ctx.stroke()
 }
 
 function writeBest(m: number) {
@@ -300,17 +288,24 @@ export function DodgePage() {
     }
 
     for (const o of obstaclesRef.current) {
-      strokeFilledRoundRect(
-        ctx,
-        o.x,
-        o.y,
-        o.w,
-        o.h,
-        4,
-        OBSTACLE_FILL,
-        OBSTACLE_STROKE,
-      )
+      ctx.beginPath()
+      if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(o.x, o.y, o.w, o.h, 4)
+      } else {
+        ctx.rect(o.x, o.y, o.w, o.h)
+      }
+      ctx.fillStyle = OBSTACLE_FILL
+      ctx.fill()
       drawObstacleLabel(ctx, o, ARENA_BG)
+      ctx.beginPath()
+      if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(o.x, o.y, o.w, o.h, 4)
+      } else {
+        ctx.rect(o.x, o.y, o.w, o.h)
+      }
+      ctx.strokeStyle = OBSTACLE_STROKE
+      ctx.lineWidth = 2
+      ctx.stroke()
     }
 
     const px = pxRef.current
