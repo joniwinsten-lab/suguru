@@ -11,6 +11,9 @@ import { dodgeLeaderboardDateRange, type DodgeLeaderTab } from '../dodgeGame/lea
 import { validatePlayerName } from '../dodgeGame/name'
 import { isSupabaseConfigured } from '../dodgeGame/supabaseClient'
 import { caughtToUiMessage, safeUiString } from '../dodgeGame/errorMessage'
+import collapickUrl from '../assets/dodge-brands/collapick.png'
+import reviseUrl from '../assets/dodge-brands/revise.png'
+import sprintitUrl from '../assets/dodge-brands/sprintit.png'
 import playerSpriteUrl from '../assets/dodge-player.jpg'
 import './DodgePage.css'
 
@@ -30,6 +33,20 @@ const MAX_OBSTACLE_LABEL_HEIGHT = 120
 
 type ObstacleKind = 'normal' | 'golive' | 'extraLife'
 
+/** Harvinaiset partneri-/brändipalikat (kuva mustalla pohjalla). */
+type BrandLogoKey = 'collapick' | 'sprintit' | 'revise'
+
+const BRAND_LOGO_URL: Record<BrandLogoKey, string> = {
+  collapick: collapickUrl,
+  sprintit: sprintitUrl,
+  revise: reviseUrl,
+}
+
+const BRAND_LOGO_KEYS: BrandLogoKey[] = ['collapick', 'sprintit', 'revise']
+
+/** Todennäköisyys että tavallinen este on logopalikka (jos kuvat ladattu). */
+const BRAND_LOGO_SPAWN_P = 0.028
+
 type Obstacle = {
   x: number
   y: number
@@ -38,6 +55,7 @@ type Obstacle = {
   vy: number
   label: string
   kind: ObstacleKind
+  logoKey?: BrandLogoKey
 }
 
 type Phase = 'lobby' | 'playing' | 'over'
@@ -234,13 +252,76 @@ function growObstacleToFitLabel(
   return { w: limitW, h: limitH }
 }
 
+/** Satunnainen koko logolle (säilyttää kuvasuhteen). */
+function sizeLogoObstacle(
+  img: HTMLImageElement,
+  rnd: () => number,
+  capOuterW: number,
+  capOuterH: number,
+): { w: number; h: number } {
+  const nw = img.naturalWidth
+  const nh = img.naturalHeight
+  const limitW = Math.min(capOuterW, W - 8)
+  const limitH = Math.min(capOuterH, MAX_OBSTACLE_LABEL_HEIGHT)
+  if (nw <= 0 || nh <= 0) {
+    return { w: Math.min(100, limitW), h: Math.min(52, limitH) }
+  }
+  const aspect = nw / nh
+  let innerH = 38 + rnd() * 52
+  innerH = Math.min(innerH, limitH - LABEL_PAD_Y * 2 - LABEL_INNER_TRIM - 2)
+  innerH = Math.max(26, innerH)
+  let innerW = innerH * aspect
+  const maxInnerW = limitW - LABEL_PAD_X * 2 - LABEL_INNER_TRIM - 2
+  if (innerW > maxInnerW) {
+    innerW = maxInnerW
+    innerH = innerW / aspect
+  }
+  const w = innerW + LABEL_PAD_X * 2 + LABEL_INNER_TRIM
+  const h = innerH + LABEL_PAD_Y * 2 + LABEL_INNER_TRIM
+  return {
+    w: Math.max(44, Math.min(limitW, w)),
+    h: Math.max(28, Math.min(limitH, h)),
+  }
+}
+
 function clampObstacleX(x: number, obstacleW: number): number {
   return clamp(x, 4, W - obstacleW - 4)
 }
 
-function drawObstacleLabel(ctx: CanvasRenderingContext2D, o: Obstacle, textColor: string) {
+function drawObstacleLabel(
+  ctx: CanvasRenderingContext2D,
+  o: Obstacle,
+  textColor: string,
+  logos?: ReadonlyMap<BrandLogoKey, HTMLImageElement> | null,
+) {
   const { maxW, maxH } = innerLabelBounds(o.w, o.h)
   if (maxW < 2 || maxH < 2) return
+
+  if (o.logoKey && logos) {
+    const img = logos.get(o.logoKey)
+    if (img && img.complete && img.naturalWidth > 0) {
+      ctx.save()
+      ctx.beginPath()
+      if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(o.x, o.y, o.w, o.h, 4)
+      } else {
+        ctx.rect(o.x, o.y, o.w, o.h)
+      }
+      ctx.clip()
+      ctx.fillStyle = '#000000'
+      ctx.fillRect(o.x, o.y, o.w, o.h)
+      const nw = img.naturalWidth
+      const nh = img.naturalHeight
+      const scale = Math.min(maxW / nw, maxH / nh)
+      const dw = nw * scale
+      const dh = nh * scale
+      const dx = o.x + LABEL_PAD_X + LABEL_INNER_TRIM / 2 + (maxW - dw) / 2
+      const dy = o.y + LABEL_PAD_Y + LABEL_INNER_TRIM / 2 + (maxH - dh) / 2
+      ctx.drawImage(img, dx, dy, dw, dh)
+      ctx.restore()
+      return
+    }
+  }
 
   const raw = o.label?.trim() || '?'
   ctx.save()
@@ -385,6 +466,7 @@ export function DodgePage() {
   const frameRef = useRef(0)
   const gameStartMsRef = useRef(0)
   const playerSpriteRef = useRef<HTMLImageElement | null>(null)
+  const brandLogosRef = useRef<Map<BrandLogoKey, HTMLImageElement>>(new Map())
   /** Enintään yksi varaelämä kerrallaan; törmäys normaaliin esteeseen kuluttaa tämän. */
   const hasReserveLifeRef = useRef(false)
   /** Kun `distanceRef` ylittää tämän (m), yritetään spawnaa extra-elämäpalikka (jos ei varaa). */
@@ -478,9 +560,16 @@ export function DodgePage() {
       } else {
         ctx.rect(o.x, o.y, o.w, o.h)
       }
-      ctx.fillStyle = o.kind === 'extraLife' ? EXTRA_LIFE_FILL : OBSTACLE_FILL
+      ctx.fillStyle =
+        o.kind === 'extraLife'
+          ? EXTRA_LIFE_FILL
+          : o.kind === 'golive'
+            ? OBSTACLE_FILL
+            : o.logoKey
+              ? '#141414'
+              : OBSTACLE_FILL
       ctx.fill()
-      drawObstacleLabel(ctx, o, ARENA_BG)
+      drawObstacleLabel(ctx, o, ARENA_BG, brandLogosRef.current)
       ctx.beginPath()
       if (typeof ctx.roundRect === 'function') {
         ctx.roundRect(o.x, o.y, o.w, o.h, 4)
@@ -492,7 +581,9 @@ export function DodgePage() {
           ? EXTRA_LIFE_STROKE
           : o.kind === 'golive'
             ? '#8b294d'
-            : OBSTACLE_STROKE
+            : o.logoKey
+              ? 'rgba(255, 255, 255, 0.22)'
+              : OBSTACLE_STROKE
       ctx.lineWidth = o.kind === 'golive' ? 2.5 : 2
       ctx.stroke()
     }
@@ -545,6 +636,44 @@ export function DodgePage() {
       cancelled = true
       img.removeEventListener('load', onLoad)
       img.removeEventListener('error', onError)
+    }
+  }, [draw])
+
+  useEffect(() => {
+    let cancelled = false
+    const imgs: HTMLImageElement[] = []
+    const cleanups: (() => void)[] = []
+    const onAny = () => {
+      if (cancelled) return
+      draw()
+    }
+    for (const key of BRAND_LOGO_KEYS) {
+      const img = new Image()
+      imgs.push(img)
+      const k = key
+      const onLoad = () => {
+        if (cancelled) return
+        brandLogosRef.current.set(k, img)
+        onAny()
+      }
+      const onError = () => {
+        if (cancelled) return
+        brandLogosRef.current.delete(k)
+        onAny()
+      }
+      img.addEventListener('load', onLoad, { once: true })
+      img.addEventListener('error', onError, { once: true })
+      img.src = BRAND_LOGO_URL[k]
+      if (img.complete && img.naturalWidth > 0) onLoad()
+      cleanups.push(() => {
+        img.removeEventListener('load', onLoad)
+        img.removeEventListener('error', onError)
+      })
+    }
+    return () => {
+      cancelled = true
+      brandLogosRef.current.clear()
+      for (const c of cleanups) c()
     }
   }, [draw])
 
@@ -653,23 +782,47 @@ export function DodgePage() {
             kind: 'golive',
           }
         } else {
-          let w = 30 + rnd() * (42 + Math.min(distanceRef.current * 0.1, 38))
-          let h = 16 + rnd() * 22
           const xr = rnd()
           const vy = fall * (0.82 + rnd() * 0.38)
-          const label = pickObstacleLabel(rnd)
-          const sized = growObstacleToFitLabel(
-            label,
-            w,
-            h,
-            W - 8,
-            MAX_OBSTACLE_LABEL_HEIGHT,
-            LABEL_MIN_READABLE_PX,
-          )
-          w = sized.w
-          h = sized.h
-          const x = clampObstacleX(4 + xr * Math.max(1, W - w - 8), w)
-          next = { x, y: -h - 6, w, h, vy, label, kind: 'normal' as const }
+          const logosMap = brandLogosRef.current
+          const avail = BRAND_LOGO_KEYS.filter((k) => {
+            const im = logosMap.get(k)
+            return Boolean(im && im.complete && im.naturalWidth > 0)
+          })
+          if (rnd() < BRAND_LOGO_SPAWN_P && avail.length > 0) {
+            const logoKey = avail[Math.floor(rnd() * avail.length)]!
+            const img = logosMap.get(logoKey)!
+            const sized = sizeLogoObstacle(img, rnd, W - 8, MAX_OBSTACLE_LABEL_HEIGHT)
+            const lw = sized.w
+            const lh = sized.h
+            const lx = clampObstacleX(4 + xr * Math.max(1, W - lw - 8), lw)
+            next = {
+              x: lx,
+              y: -lh - 6,
+              w: lw,
+              h: lh,
+              vy,
+              label: ' ',
+              kind: 'normal' as const,
+              logoKey,
+            }
+          } else {
+            let w = 30 + rnd() * (42 + Math.min(distanceRef.current * 0.1, 38))
+            let h = 16 + rnd() * 22
+            const label = pickObstacleLabel(rnd)
+            const sized = growObstacleToFitLabel(
+              label,
+              w,
+              h,
+              W - 8,
+              MAX_OBSTACLE_LABEL_HEIGHT,
+              LABEL_MIN_READABLE_PX,
+            )
+            w = sized.w
+            h = sized.h
+            const x = clampObstacleX(4 + xr * Math.max(1, W - w - 8), w)
+            next = { x, y: -h - 6, w, h, vy, label, kind: 'normal' as const }
+          }
         }
 
         obstaclesRef.current = [...obstaclesRef.current, next]
