@@ -39,6 +39,30 @@ npm run build:gh-pages
 
 **Julkaisu GitHub Pagesiin:** repon *Settings → Pages → Build and deployment → Source: GitHub Actions*. Push `main`-haaraan ajaa workflowin (`.github/workflows/deploy-pages.yml`), joka buildaa `VITE_BASE_PATH=/suguru/` ja julkaisee `dist`-kansion. Ensimmäisellä kerralla GitHub pyytää hyväksymään *Pages*-ympäristön käyttöön.
 
+### Pelisivu: vain Sanuli + AS Daily life (`https://joniwinsten-lab.github.io/as/`)
+
+Erillinen kevyt sivu (`AppAsGames`, `index-as.html`): ei Suguru-peliä. Osoite vastaa GitHub **project site** -repon [`as`](https://github.com/joniwinsten-lab/as) juurta (polku `/as/`).
+
+Paikallinen esikatselu:
+
+```bash
+npm run dev:as
+# esim. http://localhost:5173/index-as.html
+```
+
+Build (sama Supabase-env kuin pääsivulla):
+
+```bash
+npm run build:gh-pages-as
+```
+
+**Julkaisu repoon `as`:** luo GitHubissa repo `joniwinsten-lab/as`, ota **Pages** käyttöön (lähteenä `gh-pages` / juuri, tai anna Actionsin luoda haara). Suguru-repossa:
+
+1. *Settings → Secrets and variables → Actions* → salaisuus **`AS_SITE_DEPLOY_TOKEN`**: PAT, jolla on **sisältökirjoitus** kohteeseen `joniwinsten-lab/as`.
+2. *Variables* → **`DEPLOY_AS_SITE`** = `true` (ilman tätä workflow vain buildaa ja tallentaa artifactin; deploy-askel ohitetaan).
+
+Push `main`iin ajaa [`.github/workflows/deploy-as-hub.yml`](.github/workflows/deploy-as-hub.yml), joka buildaa `dist-as` ja työntää sen `as`-repoon haaraan `gh-pages`.
+
 ## Tasot
 
 Kentät generoidaan `npm run build:pools` → `public/pools/{taso}.json`. Oletuksena **3 kenttää** kutakin vaikeustasoa kohti (`POOL_COUNT` ympäristömuuttujalla voi muuttaa). Sovellus lataa valitun tason JSONin ja `parseLevel` validoi sen.

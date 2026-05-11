@@ -1,0 +1,59 @@
+name: Deploy AS games hub (github.io/as)
+
+# Julkaisee `dist-as`-buildin repoon joniwinsten-lab/as (GitHub Pages).
+# Vaatii: tyhjä tai gh-pages -valmis repo `as`, salaisuus AS_SITE_DEPLOY_TOKEN,
+# ja repomuuttujan DEPLOY_AS_SITE=true (suguru-repo → Settings → Variables).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-as-hub
+  cancel-in-progress: true
+
+jobs:
+  build-as-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Build AS hub (base /as/)
+        run: npm run build:gh-pages-as
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-as
+          path: dist-as
+
+  deploy-as-hub:
+    needs: build-as-hub
+    if: vars.DEPLOY_AS_SITE == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-as
+          path: dist-as
+
+      - name: Push to joniwinsten-lab/as (gh-pages)
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: dist-as
+          branch: gh-pages
+          repository-name: joniwinsten-lab/as
+          token: ${{ secrets.AS_SITE_DEPLOY_TOKEN }}
+          clean: true
