@@ -15,6 +15,7 @@
     "build:words": "node scripts/build-fi-5-full.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.105.4",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.2"

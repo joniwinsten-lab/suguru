@@ -6,6 +6,7 @@ import {
   matchesGuidedSmallRegionHistogram,
   regionSizeHistogram,
 } from './regionHistogram'
+import { parseLevel } from './level'
 import type { LevelJson } from './types'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -52,17 +53,15 @@ describe('matchesGuidedSmallRegionHistogram', () => {
     }
   })
 
-  it('legend-9 pool noudattaa histogrammia', () => {
+  it('legend-9 pool: vapaa jako, vähintään kaksi aluekokoa, uniikit layoutit', () => {
     const levels = readPoolLevels('legend-9')
+    const layoutKeys = new Set<string>()
     for (const lvl of levels) {
-      expect(matchesGuidedSmallRegionHistogram(lvl.height, lvl.width, lvl.regions)).toBe(
-        true,
-      )
+      parseLevel(lvl)
       const h = regionSizeHistogram(lvl.regions)
-      expect(h.get(1)).toBe(2)
-      expect(h.get(2)).toBe(3)
-      expect(h.get(3)).toBe(3)
-      expect(h.get(4)).toBe(2)
+      expect(h.size).toBeGreaterThanOrEqual(2)
+      layoutKeys.add(JSON.stringify(lvl.regions))
     }
+    expect(layoutKeys.size).toBe(levels.length)
   })
 })

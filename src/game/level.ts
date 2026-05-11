@@ -21,7 +21,7 @@ function assertDimensions(
  * Validates structure and Suguru clues; returns a normalized Level.
  * Does not verify unique solution — only that givens do not break rules.
  *
- * 7×7–9×9 pool-kentille suositeltu histogrammi: `matchesGuidedSmallRegionHistogram` (ks. `regionHistogram.ts`).
+ * 7×7 ja 8×8 pool-kentille: `matchesGuidedSmallRegionHistogram`. 9×9 Legenda käyttää vapaata jakoa.
  */
 export function parseLevel(raw: LevelJson): Level {
   const { id, title, width, height, regions, givens } = raw

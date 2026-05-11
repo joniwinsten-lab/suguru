@@ -19,15 +19,15 @@ const CLUE_RATIO_BOUNDS: Record<string, { min: number; max: number }> = {
   'easy-6': { min: 0.3, max: 0.5 },
   'hard-7': { min: 0.3, max: 0.5 },
   'pro-8': { min: 0.3, max: 0.5 },
-  'legend-9': { min: 0.25, max: 0.4 },
+  'legend-9': { min: 0.56, max: 0.62 },
 }
 
 function assertGivensFraction(level: Level, tierId: string): void {
   const { height, width, givens } = level
   const total = height * width
   const bounds = CLUE_RATIO_BOUNDS[tierId]
-  const minExpected = Math.min(total, Math.max(1, Math.round(total * bounds.min)))
-  const maxExpected = Math.min(total, Math.max(1, Math.round(total * bounds.max)))
+  const minExpected = Math.min(total, Math.max(1, Math.ceil(total * bounds.min)))
+  const maxExpected = Math.min(total, Math.max(1, Math.floor(total * bounds.max)))
   let n = 0
   for (let r = 0; r < height; r++) {
     for (let c = 0; c < width; c++) {
