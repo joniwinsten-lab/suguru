@@ -54,10 +54,107 @@
   align-items: baseline;
 }
 
-.dodge__reserve {
+.dodge__lives {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.28rem 0.55rem 0.28rem 0.42rem;
+  border-radius: 999px;
   font-size: 0.82rem;
+  font-weight: 800;
+  color: #4a148c;
+  background: linear-gradient(145deg, #fce4ff 0%, #e1bee7 45%, #ce93d8 100%);
+  border: 1px solid rgba(106, 27, 154, 0.35);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.65) inset,
+    0 2px 8px rgba(106, 27, 154, 0.22);
+  animation:
+    dodge-lives-pop-in 0.55s cubic-bezier(0.34, 1.56, 0.64, 1),
+    dodge-lives-glow 2.4s ease-in-out infinite 0.55s;
+}
+
+.dodge__lives__burst {
+  position: absolute;
+  inset: -6px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    rgba(255, 213, 74, 0.55) 0%,
+    rgba(234, 128, 252, 0.25) 35%,
+    transparent 65%
+  );
+  animation: dodge-lives-burst 0.75s ease-out forwards;
+  opacity: 0.9;
+}
+
+.dodge__lives__heart {
+  font-size: 1rem;
+  line-height: 1;
+  color: #c2185b;
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.9));
+}
+
+.dodge__lives__main {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.15rem;
+}
+
+.dodge__lives__num {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.dodge__lives__word {
+  font-size: 0.72rem;
   font-weight: 700;
-  color: #b369f3;
+  text-transform: lowercase;
+  opacity: 0.92;
+}
+
+@keyframes dodge-lives-pop-in {
+  0% {
+    transform: scale(0.35);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes dodge-lives-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.65) inset,
+      0 2px 8px rgba(106, 27, 154, 0.22),
+      0 0 0 0 rgba(179, 105, 243, 0.35);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.65) inset,
+      0 2px 10px rgba(106, 27, 154, 0.28),
+      0 0 0 5px rgba(179, 105, 243, 0);
+  }
+}
+
+@keyframes dodge-lives-burst {
+  0% {
+    transform: scale(0.4);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
 }
 
 .dodge__hint {

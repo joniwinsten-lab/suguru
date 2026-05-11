@@ -58,9 +58,40 @@ type Obstacle = {
   logoKey?: BrandLogoKey
 }
 
-type Phase = 'lobby' | 'playing' | 'over'
+/** Ilotulitus kerättäessä varaelämä. */
+type LifeSpark = {
+  x: number
+  y: number
+  vx: number
+  vy: number
+  age: number
+  ttl: number
+  color: string
+  r: number
+}
+
+function spawnExtraLifeFireworks(sparks: LifeSpark[], cx: number, cy: number, rnd: () => number) {
+  const colors = ['#ffe082', '#ff80ab', '#ea80fc', '#fff59d', '#b388ff', '#69f0ae', '#ffffff', '#ffd740']
+  const n = 36 + Math.floor(rnd() * 26)
+  for (let i = 0; i < n; i++) {
+    const ang = rnd() * Math.PI * 2
+    const spd = 70 + rnd() * 200
+    sparks.push({
+      x: cx + (rnd() - 0.5) * 10,
+      y: cy + (rnd() - 0.5) * 10,
+      vx: Math.cos(ang) * spd,
+      vy: Math.sin(ang) * spd - rnd() * 100,
+      age: 0,
+      ttl: 0.42 + rnd() * 0.5,
+      color: colors[Math.floor(rnd() * colors.length)]!,
+      r: 1.2 + rnd() * 3.2,
+    })
+  }
+}
 
 type LeaderTab = DodgeLeaderTab
+
+type Phase = 'lobby' | 'playing' | 'over'
 
 const ARENA_BG = '#FBEAE3'
 const OBSTACLE_FILL = '#5A1537'
@@ -264,12 +295,13 @@ function sizeLogoObstacle(
   const limitW = Math.min(capOuterW, W - 8)
   const limitH = Math.min(capOuterH, MAX_OBSTACLE_LABEL_HEIGHT)
   if (nw <= 0 || nh <= 0) {
-    return { w: Math.min(100, limitW), h: Math.min(52, limitH) }
+    return { w: Math.min(56, limitW), h: Math.min(30, limitH) }
   }
   const aspect = nw / nh
-  let innerH = 38 + rnd() * 52
-  innerH = Math.min(innerH, limitH - LABEL_PAD_Y * 2 - LABEL_INNER_TRIM - 2)
-  innerH = Math.max(26, innerH)
+  const maxInnerH = Math.min(32, limitH - LABEL_PAD_Y * 2 - LABEL_INNER_TRIM - 2)
+  let innerH = 12 + rnd() * 14
+  innerH = Math.min(innerH, maxInnerH)
+  innerH = Math.max(9, innerH)
   let innerW = innerH * aspect
   const maxInnerW = limitW - LABEL_PAD_X * 2 - LABEL_INNER_TRIM - 2
   if (innerW > maxInnerW) {
@@ -279,8 +311,8 @@ function sizeLogoObstacle(
   const w = innerW + LABEL_PAD_X * 2 + LABEL_INNER_TRIM
   const h = innerH + LABEL_PAD_Y * 2 + LABEL_INNER_TRIM
   return {
-    w: Math.max(44, Math.min(limitW, w)),
-    h: Math.max(28, Math.min(limitH, h)),
+    w: Math.max(28, Math.min(limitW, w)),
+    h: Math.max(16, Math.min(limitH, h)),
   }
 }
 
@@ -455,8 +487,11 @@ export function DodgePage() {
   const [boardError, setBoardError] = useState<string | null>(null)
   const [boardRows, setBoardRows] = useState<DodgeLeaderboardRow[]>([])
   const [reserveLifeHud, setReserveLifeHud] = useState(false)
+  /** Kasvaa kun varaelämä saadaan → HUD-animaatio uudelleenkäynnistyy. */
+  const [lifeBadgeEpoch, setLifeBadgeEpoch] = useState(0)
 
   const obstaclesRef = useRef<Obstacle[]>([])
+  const lifeSparksRef = useRef<LifeSpark[]>([])
   const pxRef = useRef(W / 2)
   const pyRef = useRef(H - 72)
   const distanceRef = useRef(0)
@@ -613,6 +648,24 @@ export function DodgePage() {
       ctx.lineWidth = 2
       ctx.stroke()
     }
+
+    const sparks = lifeSparksRef.current
+    if (sparks.length > 0) {
+      ctx.save()
+      ctx.globalCompositeOperation = 'lighter'
+      for (const s of sparks) {
+        const t = s.age / s.ttl
+        const alpha = Math.max(0, 1 - t * 1.08)
+        if (alpha <= 0.02) continue
+        ctx.globalAlpha = alpha
+        ctx.fillStyle = s.color
+        const rr = s.r * (1.05 - t * 0.45)
+        ctx.beginPath()
+        ctx.arc(s.x, s.y, Math.max(0.35, rr), 0, Math.PI * 2)
+        ctx.fill()
+      }
+      ctx.restore()
+    }
   }, [])
 
   useEffect(() => {
@@ -695,6 +748,7 @@ export function DodgePage() {
     setPhase('over')
     hasReserveLifeRef.current = false
     setReserveLifeHud(false)
+    lifeSparksRef.current = []
     draw()
   }, [draw])
 
@@ -708,8 +762,10 @@ export function DodgePage() {
     }
 
     obstaclesRef.current = []
+    lifeSparksRef.current = []
     hasReserveLifeRef.current = false
     setReserveLifeHud(false)
+    setLifeBadgeEpoch(0)
     nextExtraLifeAtMetersRef.current = 380 + Math.random() * 160
     distanceRef.current = 0
     spawnCooldownRef.current = 0.15
@@ -731,6 +787,16 @@ export function DodgePage() {
       const last = lastTsRef.current || ts
       const dt = Math.min(0.05, (ts - last) / 1000)
       lastTsRef.current = ts
+
+      const sparks = lifeSparksRef.current
+      for (let i = sparks.length - 1; i >= 0; i--) {
+        const s = sparks[i]!
+        s.age += dt
+        s.x += s.vx * dt
+        s.y += s.vy * dt
+        s.vy += 340 * dt
+        if (s.age >= s.ttl) sparks.splice(i, 1)
+      }
 
       const d0 = distanceRef.current
       distanceRef.current += metersPerSecond(d0) * dt
@@ -876,6 +942,8 @@ export function DodgePage() {
           if (!hasReserveLifeRef.current) {
             hasReserveLifeRef.current = true
             setReserveLifeHud(true)
+            setLifeBadgeEpoch((n) => n + 1)
+            spawnExtraLifeFireworks(lifeSparksRef.current, px, py, Math.random)
             nextExtraLifeAtMetersRef.current = extraLifeNextSpawnMeters(distanceRef.current, Math.random)
           }
           break
@@ -1033,8 +1101,20 @@ export function DodgePage() {
                 <span>{displayM.toFixed(1)} m</span>
               </span>
               {reserveLifeHud ? (
-                <span className="dodge__reserve" title="Seuraava osuma kuluttaa varaelämän.">
-                  Varaelämä
+                <span
+                  key={lifeBadgeEpoch}
+                  className="dodge__lives"
+                  title="Seuraava osuma kuluttaa tämän elämän. Sait lisäelämän!"
+                  role="status"
+                >
+                  <span className="dodge__lives__burst" aria-hidden="true" />
+                  <span className="dodge__lives__heart" aria-hidden="true">
+                    ♥
+                  </span>
+                  <span className="dodge__lives__main">
+                    <span className="dodge__lives__num">1</span>
+                    <span className="dodge__lives__word">elämä</span>
+                  </span>
                 </span>
               ) : null}
             </div>
