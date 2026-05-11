@@ -1,6 +1,7 @@
 import { HashRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import { DodgePage } from './pages/DodgePage'
 import { SanuliPage } from './pages/SanuliPage'
+import { SanuliNavLabel } from './sanuli/SanuliNavLabel'
 import { SuguruPage } from './pages/SuguruPage'
 import './App.css'
 
@@ -13,7 +14,7 @@ export default function App() {
           Suguru
         </NavLink>
         <NavLink className="site-nav__link" to="/sanuli">
-          Sanuli
+          <SanuliNavLabel />
         </NavLink>
         <NavLink className="site-nav__link" to="/as-daily-life">
           AS Daily life

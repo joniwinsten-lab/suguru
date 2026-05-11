@@ -27,6 +27,13 @@
   background: var(--accent);
 }
 
+/** Finnish-only game label next to “Sanuli” in the English shell */
+.lang-note-fi {
+  font-weight: 500;
+  font-size: 0.78em;
+  opacity: 0.9;
+}
+
 .app {
   max-width: min(36rem, 100%);
   margin: 0 auto;

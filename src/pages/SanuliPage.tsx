@@ -11,6 +11,7 @@ import {
   scoreGuess,
   type TileState,
 } from '../sanuli/scoreGuess'
+import { SANULI_NAME_FOR_SHARE, SanuliNavLabel } from '../sanuli/SanuliNavLabel'
 import './SanuliPage.css'
 
 const ROWS = 6
@@ -408,7 +409,7 @@ export function SanuliPage() {
   const copyShare = useCallback(async () => {
     if (!solution || !lost) return
     const n = committed.length
-    const header = `Sanuli ${dayKeyToEnLabel(dayKey)} · word ${activeSlot + 1}/${slotCount} · ${n}/${ROWS}`
+    const header = `${SANULI_NAME_FOR_SHARE} ${dayKeyToEnLabel(dayKey)} · word ${activeSlot + 1}/${slotCount} · ${n}/${ROWS}`
     const grid = committed.map((r) => shareEmoji(r.scores)).join('\n')
     const text = `${header}\n${grid}`
     try {
@@ -421,7 +422,7 @@ export function SanuliPage() {
 
   const copyDailySummary = useCallback(async () => {
     if (!allDone) return
-    const header = `Sanuli ${dayKeyToEnLabel(dayKey)} · 5/5`
+    const header = `${SANULI_NAME_FOR_SHARE} ${dayKeyToEnLabel(dayKey)} · 5/5`
     const lines = wonAttempts.map((x) => `Word ${x.slotNumber}: ${x.attempts}/${ROWS}`)
     const compact = wonAttempts.map((x) => `${x.slotNumber}:${x.attempts}`).join('  ')
     const text = `${header}\n${compact}\n${lines.join('\n')}`
@@ -469,7 +470,9 @@ export function SanuliPage() {
   return (
     <div className="sanuli app">
       <header className="sanuli-header">
-        <h1>Sanuli</h1>
+        <h1>
+          <SanuliNavLabel />
+        </h1>
         <p className="sanuli-lead">
           Five five-letter words per day (UTC). When you solve a word, you unlock the next — up to{' '}
           {DAILY_WORD_SLOTS} words. Six guesses per word. Green / yellow / grey like Wordle.

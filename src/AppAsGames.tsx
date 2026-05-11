@@ -1,6 +1,7 @@
 import { HashRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import { DodgePage } from './pages/DodgePage'
 import { SanuliPage } from './pages/SanuliPage'
+import { SanuliNavLabel } from './sanuli/SanuliNavLabel'
 import './App.css'
 
 /** Do not use `import.meta.env.BASE_URL` as HashRouter basename: routes live in `#/…`, not `/as/…`. */
@@ -12,7 +13,7 @@ function GamesHub() {
       <ul className="as-games-hub__list">
         <li>
           <NavLink className="as-games-hub__card" to="/sanuli">
-            Sanuli
+            <SanuliNavLabel />
           </NavLink>
         </li>
         <li>
@@ -34,7 +35,7 @@ export default function AppAsGames() {
           Home
         </NavLink>
         <NavLink className="site-nav__link" to="/sanuli">
-          Sanuli
+          <SanuliNavLabel />
         </NavLink>
         <NavLink className="site-nav__link" to="/as-daily-life">
           AS Daily life
