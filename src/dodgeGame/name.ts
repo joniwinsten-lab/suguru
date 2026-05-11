@@ -4,10 +4,10 @@ export function normalizePlayerName(raw: string): string {
   return raw.trim().replace(/\s+/g, ' ')
 }
 
-/** Palauttaa null jos ok, muuten virheilmoitus. */
+/** Returns null if valid, otherwise an error message. */
 export function validatePlayerName(raw: string): string | null {
   const s = normalizePlayerName(raw)
-  if (s.length === 0) return 'Kirjoita nimi.'
-  if (s.length > MAX) return `Nimi saa olla enintään ${MAX} merkkiä.`
+  if (s.length === 0) return 'Enter a name.'
+  if (s.length > MAX) return `Name must be at most ${MAX} characters.`
   return null
 }

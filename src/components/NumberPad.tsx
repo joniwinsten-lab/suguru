@@ -13,7 +13,7 @@ export function NumberPad({
 }: NumberPadProps) {
   const keys = Array.from({ length: maxDigit }, (_, i) => i + 1)
   return (
-    <div className="number-pad" aria-label="Numeron valinta">
+    <div className="number-pad" aria-label="Pick a number">
       {keys.map((d) => (
         <button
           key={d}
@@ -31,7 +31,7 @@ export function NumberPad({
         disabled={disabled}
         onClick={onClear}
       >
-        Tyhjennä
+        Clear
       </button>
     </div>
   )

@@ -7,7 +7,7 @@ describe('dodgeGame name', () => {
   })
 
   it('validates', () => {
-    expect(validatePlayerName('')).toBe('Kirjoita nimi.')
+    expect(validatePlayerName('')).toBe('Enter a name.')
     expect(validatePlayerName('x')).toBe(null)
   })
 })

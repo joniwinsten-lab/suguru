@@ -84,22 +84,22 @@ export function SuguruPage() {
       <header className="app-header">
         <h1>Suguru</h1>
         <p className="app-lead">
-          Täytä jokainen alue eri luvuin 1…k (k = alueen koko). N×N-ruudukolla
-          suurin käytettävä luku on N (4×4 → 1…4, 8×8 → 1…8, 9×9 → 1…9). Vierekkäiset
-          solut (myös vinosti) eivät saa sisältää samaa lukua.
+          Fill each region with different numbers 1…k (k = region size). On an N×N grid the
+          largest number is N (4×4 → 1…4, 8×8 → 1…8, 9×9 → 1…9). Neighbouring cells
+          (including diagonally) must not contain the same number.
         </p>
       </header>
 
       <div className="app-toolbar">
         <label className="level-picker">
-          <span className="level-picker__label">Vaikeustaso</span>
+          <span className="level-picker__label">Difficulty</span>
           <select
             value={tierId}
             onChange={(e) => {
               setTierId(e.target.value as PoolTierId)
               setLevelIndex(0)
             }}
-            aria-label="Valitse vaikeustaso"
+            aria-label="Select difficulty"
           >
             {POOL_TIERS.map((t) => (
               <option key={t.id} value={t.id}>
@@ -110,7 +110,7 @@ export function SuguruPage() {
         </label>
 
         <label className="field-picker">
-          <span className="field-picker__label">Kenttä</span>
+          <span className="field-picker__label">Puzzle</span>
           <input
             className="field-picker__input"
             type="number"
@@ -124,20 +124,20 @@ export function SuguruPage() {
               const clamped = Math.min(Math.max(1, v), poolForTier.count)
               setLevelIndex(clamped - 1)
             }}
-            aria-label="Kentän numero tasossa"
+            aria-label="Puzzle number in tier"
           />
           <span className="field-picker__meta" aria-live="polite">
             {poolForTier ? ` / ${poolForTier.count}` : ''}
           </span>
         </label>
 
-        <div className="field-nav" role="group" aria-label="Kentän selaus">
+        <div className="field-nav" role="group" aria-label="Puzzle navigation">
           <button
             type="button"
             disabled={!canGoPrev}
             onClick={() => setLevelIndex((i) => Math.max(0, i - 1))}
           >
-            Edellinen kenttä
+            Previous puzzle
           </button>
           <button
             type="button"
@@ -148,65 +148,65 @@ export function SuguruPage() {
               )
             }
           >
-            Seuraava kenttä
+            Next puzzle
           </button>
         </div>
 
-        <div className="field-nav" role="group" aria-label="Tulokset">
+        <div className="field-nav" role="group" aria-label="Results">
           <button
             type="button"
             onClick={() => setResultsOpen((v) => !v)}
             disabled={!poolForTier}
           >
-            {resultsOpen ? 'Piilota tulokset' : 'Tulokset'}
+            {resultsOpen ? 'Hide results' : 'Results'}
           </button>
         </div>
       </div>
 
       {resultsOpen && poolForTier ? (
-        <section className="results-panel" aria-label="Tulokset">
+        <section className="results-panel" aria-label="Results">
           <p className="results-panel__meta">
-            Läpäisty {solvedCount}/{poolForTier.count}
+            Solved {solvedCount}/{poolForTier.count}
           </p>
-          <div className="results-controls" role="group" aria-label="Tulosten suodatus">
+          <div className="results-controls" role="group" aria-label="Filter results">
             <button
               type="button"
               className={resultsFilter === 'all' ? 'is-active' : ''}
               onClick={() => setResultsFilter('all')}
             >
-              Kaikki
+              All
             </button>
             <button
               type="button"
               className={resultsFilter === 'solved' ? 'is-active' : ''}
               onClick={() => setResultsFilter('solved')}
             >
-              Läpäistyt
+              Solved
             </button>
             <button
               type="button"
               className={resultsFilter === 'unsolved' ? 'is-active' : ''}
               onClick={() => setResultsFilter('unsolved')}
             >
-              Kesken
+              Unsolved
             </button>
           </div>
           <div className="results-table-wrap">
             <table className="results-table">
               <thead>
                 <tr>
-                  <th>Kenttä</th>
-                  <th>Tila</th>
-                  <th>Paras</th>
-                  <th>Viimeisin</th>
-                  <th>Kerrat</th>
+                  <th>Puzzle</th>
+                  <th>Status</th>
+                  <th>Best</th>
+                  <th>Last</th>
+                  <th>Runs</th>
                 </tr>
               </thead>
               <tbody>
                 {visibleResults.map(({ index, rec }) => (
                   <tr key={index}>
                     <td>{index + 1}</td>
-                    <td>{rec ? 'Läpäisty' : '—'}</td>
+                    <td>{rec ? 'Solved' : '—'}</td>
                     <td>{rec ? formatElapsed(rec.bestMs) : '—'}</td>
                     <td>{rec ? formatElapsed(rec.lastMs) : '—'}</td>
                     <td>{rec ? rec.solveCount : '—'}</td>
@@ -215,16 +215,16 @@ export function SuguruPage() {
               </tbody>
             </table>
           </div>
-          <div className="results-pagination" role="group" aria-label="Tulosten sivutus">
+          <div className="results-pagination" role="group" aria-label="Results pagination">
             <button
               type="button"
               disabled={clampedPage <= 0}
               onClick={() => setResultsPage((p) => Math.max(0, p - 1))}
             >
-              Edellinen sivu
+              Previous page
             </button>
             <span>
-              Sivu {clampedPage + 1}/{resultsPageCount}
+              Page {clampedPage + 1}/{resultsPageCount}
             </span>
             <button
               type="button"
@@ -233,7 +233,7 @@ export function SuguruPage() {
                 setResultsPage((p) => Math.min(resultsPageCount - 1, p + 1))
               }
             >
-              Seuraava sivu
+              Next page
             </button>
           </div>
         </section>
@@ -246,7 +246,7 @@ export function SuguruPage() {
       ) : null}
 
       {!poolForTier && !poolError ? (
-        <p className="app-loading">Ladataan kenttiä…</p>
+        <p className="app-loading">Loading puzzles…</p>
       ) : null}
 
       {poolForTier && level ? (
@@ -263,7 +263,7 @@ export function SuguruPage() {
 
       {poolForTier && !level && !poolError ? (
         <p className="app-error" role="alert">
-          Virheellinen taso.
+          Invalid puzzle.
         </p>
       ) : null}
     </div>

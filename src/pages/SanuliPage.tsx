@@ -39,10 +39,17 @@ function parseDayKey(dayKey: string): { d: number; m: number; y: number } | null
   return { y: Number(m[1]), m: Number(m[2]), d: Number(m[3]) }
 }
 
-function dayKeyToFiLabel(dayKey: string): string {
+function dayKeyToEnLabel(dayKey: string): string {
   const p = parseDayKey(dayKey)
   if (!p) return dayKey
-  return `${p.d}.${p.m}.${p.y}`
+  const d = new Date(Date.UTC(p.y, p.m - 1, p.d))
+  return d.toLocaleDateString('en-US', {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  })
 }
 
 function emptySlots(count: number): SlotPersisted[] {
@@ -193,7 +200,7 @@ export function SanuliPage() {
         setPack(p)
         if (p.solutions.length < DAILY_WORD_SLOTS) {
           setLoadError(
-            `Sanalistassa pitää olla vähintään ${DAILY_WORD_SLOTS} ratkaisua täydelle päivälle (nyt ${p.solutions.length}).`,
+            `The word list needs at least ${DAILY_WORD_SLOTS} solutions for a full day (currently ${p.solutions.length}).`,
           )
           setIndices([])
           return
@@ -261,7 +268,7 @@ export function SanuliPage() {
     if (!allowedSet.has(guess)) {
       setShakeRow(true)
       window.setTimeout(() => setShakeRow(false), 450)
-      showToast('Ei sanalistalla')
+      showToast('Not in word list')
       return
     }
 
@@ -311,7 +318,7 @@ export function SanuliPage() {
       const solvedAll = prevWon + 1 >= total
       setCelebration({
         slotNumber: activeSlot + 1,
-        message: solvedAll ? `Kaikki ${total}/${total} ratkaistu!` : 'Oikein!',
+        message: solvedAll ? `All ${total}/${total} solved!` : 'Correct!',
       })
       if (celebrationTimer.current) window.clearTimeout(celebrationTimer.current)
       celebrationTimer.current = window.setTimeout(() => {
@@ -319,8 +326,8 @@ export function SanuliPage() {
         celebrationTimer.current = null
       }, 2100)
       if (prevWon + 1 >= total)
-        showToast(`Kaikki päivän ${total} sanaa ratkaistu!`)
-      else showToast('Oikein! Seuraava sana.')
+        showToast(`All ${total} words for today solved!`)
+      else showToast('Correct! Next word.')
     }
   }, [
     playing,
@@ -401,28 +408,28 @@ export function SanuliPage() {
   const copyShare = useCallback(async () => {
     if (!solution || !lost) return
     const n = committed.length
-    const header = `Sanuli ${dayKeyToFiLabel(dayKey)} · sana ${activeSlot + 1}/${slotCount} · ${n}/${ROWS}`
+    const header = `Sanuli ${dayKeyToEnLabel(dayKey)} · word ${activeSlot + 1}/${slotCount} · ${n}/${ROWS}`
     const grid = committed.map((r) => shareEmoji(r.scores)).join('\n')
     const text = `${header}\n${grid}`
     try {
       await navigator.clipboard.writeText(text)
-      showToast('Kopioitu leikepöydälle')
+      showToast('Copied to clipboard')
     } catch {
-      showToast('Kopiointi epäonnistui')
+      showToast('Copy failed')
     }
   }, [solution, lost, committed, dayKey, activeSlot, slotCount, showToast])
 
   const copyDailySummary = useCallback(async () => {
     if (!allDone) return
-    const header = `Sanuli ${dayKeyToFiLabel(dayKey)} · 5/5`
-    const lines = wonAttempts.map((x) => `Sana ${x.slotNumber}: ${x.attempts}/${ROWS}`)
+    const header = `Sanuli ${dayKeyToEnLabel(dayKey)} · 5/5`
+    const lines = wonAttempts.map((x) => `Word ${x.slotNumber}: ${x.attempts}/${ROWS}`)
     const compact = wonAttempts.map((x) => `${x.slotNumber}:${x.attempts}`).join('  ')
     const text = `${header}\n${compact}\n${lines.join('\n')}`
     try {
       await navigator.clipboard.writeText(text)
-      showToast('Päivän tulos kopioitu')
+      showToast('Daily summary copied')
     } catch {
-      showToast('Kopiointi epäonnistui')
+      showToast('Copy failed')
     }
   }, [allDone, dayKey, wonAttempts, showToast])
 
@@ -454,7 +461,7 @@ export function SanuliPage() {
   if (!pack || indices.length === 0 || !solution || !hydrated) {
     return (
       <div className="sanuli app">
-        <p className="app-loading">Ladataan…</p>
+        <p className="app-loading">Loading…</p>
       </div>
     )
   }
@@ -464,14 +471,14 @@ export function SanuliPage() {
       <header className="sanuli-header">
         <h1>Sanuli</h1>
         <p className="sanuli-lead">
-          Viisi viisikirjaimista sanaa päivässä (UTC). Kun ratkaiset sanan, saat seuraavan — enintään{' '}
-          {DAILY_WORD_SLOTS} sanaa. Kuusi yritystä per sana. Vihreä / keltainen / harmaa kuten Wordlessä.
+          Five five-letter words per day (UTC). When you solve a word, you unlock the next — up to{' '}
+          {DAILY_WORD_SLOTS} words. Six guesses per word. Green / yellow / grey like Wordle.
         </p>
       </header>
 
       <div
         className="sanuli-progress"
-          aria-label={`Päivän sanat: ${wonCount} / ${slotCount}`}
+          aria-label={`Today's words: ${wonCount} / ${slotCount}`}
       >
         {slotsPersist.map((s, i) => (
           <span
@@ -482,7 +489,7 @@ export function SanuliPage() {
           </span>
         ))}
         <span className="sanuli-progress__meta">
-          Ratkaistu {wonCount}/{slotCount}
+          Solved {wonCount}/{slotCount}
         </span>
       </div>
 
@@ -498,28 +505,28 @@ export function SanuliPage() {
             🎉
           </div>
           <p className="sanuli-celebration__text">{celebration.message}</p>
-          <p className="sanuli-celebration__sub">Sana {celebration.slotNumber} ratkaistu</p>
+          <p className="sanuli-celebration__sub">Word {celebration.slotNumber} solved</p>
         </div>
       ) : null}
 
       {allDone ? (
-        <section className="sanuli-day-summary" aria-label="Päivän yhteenveto">
+        <section className="sanuli-day-summary" aria-label="Daily summary">
           <p className="sanuli-message sanuli-message--won" role="status">
-            Loistavaa — kaikki päivän sanat ratkaistu ({slotCount}/{slotCount})! Palaa huomenna uusien sanojen pariin.
+            Great — all words for today solved ({slotCount}/{slotCount})! Come back tomorrow for new words.
           </p>
           <div className="sanuli-day-summary__card">
-            <h2>Päivän tulos</h2>
-            <p className="sanuli-day-summary__date">{dayKeyToFiLabel(dayKey)}</p>
+            <h2>Today's result</h2>
+            <p className="sanuli-day-summary__date">{dayKeyToEnLabel(dayKey)}</p>
             <ul className="sanuli-day-summary__list">
               {wonAttempts.map((item) => (
                 <li key={item.slotNumber}>
-                  <span>Sana {item.slotNumber}</span>
+                  <span>Word {item.slotNumber}</span>
                   <strong>{item.attempts}/6</strong>
                 </li>
               ))}
             </ul>
             <button type="button" onClick={() => void copyDailySummary()}>
-              Jaa päivän tulos
+              Share today's result
             </button>
           </div>
         </section>
@@ -528,10 +535,10 @@ export function SanuliPage() {
       {!allDone ? (
         <>
           <p className="sanuli-slot-label">
-            Sana <strong>{activeSlot + 1}</strong> / {slotCount}
+            Word <strong>{activeSlot + 1}</strong> / {slotCount}
           </p>
 
-          <div className="sanuli-board" role="grid" aria-label="Arvausruudukko">
+          <div className="sanuli-board" role="grid" aria-label="Guess grid">
             {Array.from({ length: ROWS }, (_, ri) => {
               const rowCommitted = committed[ri]
               const isCurrent = ri === currentRowIndex && playing
@@ -547,7 +554,7 @@ export function SanuliPage() {
                   key={ri}
                   className={`sanuli-row${shake ? ' sanuli-row--shake' : ''}`}
                   role="row"
-                  aria-label={`Rivi ${ri + 1}`}
+                  aria-label={`Row ${ri + 1}`}
                 >
                   {letters.map((ch, ci) => {
                     const st = scores?.[ci] ?? (ch ? 'tbd' : 'empty')
@@ -557,7 +564,7 @@ export function SanuliPage() {
                         key={ci}
                         className={tileClass(st)}
                         role="gridcell"
-                        aria-label={ch ? `${display}, ${st}` : 'tyhjä'}
+                        aria-label={ch ? `${display}, ${st}` : 'empty'}
                       >
                         {display}
                       </div>
@@ -571,22 +578,22 @@ export function SanuliPage() {
           {lost ? (
             <div className="sanuli-after-loss">
               <p className="sanuli-message sanuli-message--lost" role="status">
-                Yritykset loppuivat. Oikea sana oli{' '}
-                <strong>{solution.toUpperCase()}</strong>. Voit yrittää samaa sanaa uudelleen tai odottaa huomista.
+                You're out of guesses. The word was{' '}
+                <strong>{solution.toUpperCase()}</strong>. You can retry this word or wait until tomorrow.
               </p>
               <button type="button" className="sanuli-retry" onClick={() => retrySlot()}>
-                Yritä uudelleen
+                Try again
               </button>
             </div>
           ) : null}
 
           <div className="sanuli-actions">
             <button type="button" disabled={!lost} onClick={() => void copyShare()}>
-              Jako
+              Share
             </button>
           </div>
 
-          <div className="sanuli-keyboard" role="group" aria-label="Näppäimistö">
+          <div className="sanuli-keyboard" role="group" aria-label="Keyboard">
             {KEYBOARD_ROWS.map((row, ri) => (
               <div key={ri} className="sanuli-keyboard__row">
                 {row.map((k) => {

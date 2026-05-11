@@ -35,7 +35,7 @@ export function Board({ state, onSelect }: BoardProps) {
         gridTemplateColumns: `repeat(${width}, minmax(0, 1fr))`,
       }}
       role="grid"
-      aria-label="Suguru-ruudukko"
+      aria-label="Suguru grid"
     >
       {Array.from({ length: height }, (_, row) =>
         Array.from({ length: width }, (_, col) => {
@@ -97,8 +97,8 @@ function describeCell(
   value: number | null,
   given: boolean,
 ): string {
-  const pos = `Rivi ${row + 1}, sarake ${col + 1}`
-  if (value === null) return `${pos}, tyhjä`
-  const clue = given ? 'vihje' : 'oma numero'
+  const pos = `Row ${row + 1}, column ${col + 1}`
+  if (value === null) return `${pos}, empty`
+  const clue = given ? 'clue' : 'your number'
   return `${pos}, ${clue} ${value}`
 }

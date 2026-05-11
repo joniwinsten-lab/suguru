@@ -112,17 +112,17 @@ export function Game({
       <p className="game-meta" aria-live="polite">
         <span className="game-meta__title">{tierTitle}</span>
         <span className="game-meta__sep"> · </span>
-        Kenttä {levelIndex + 1}/{poolCount}
+        Field {levelIndex + 1}/{poolCount}
         <span className="game-meta__sep"> · </span>
-        <span className="game-meta__timer">Aika: {formatElapsed(elapsedMs)}</span>
+        <span className="game-meta__timer">Time: {formatElapsed(elapsedMs)}</span>
         {storedStats ? (
           <>
             <span className="game-meta__sep"> · </span>
-            Paras: {formatElapsed(storedStats.bestMs)}
+            Best: {formatElapsed(storedStats.bestMs)}
             {storedStats.lastMs !== storedStats.bestMs ? (
               <>
                 <span className="game-meta__sep"> · </span>
-                Viimeisin: {formatElapsed(storedStats.lastMs)}
+                Last: {formatElapsed(storedStats.lastMs)}
               </>
             ) : null}
           </>
@@ -151,15 +151,15 @@ export function Game({
             setResetTick((t) => t + 1)
           }}
         >
-          Nollaa kenttä
+          Reset board
         </button>
       </div>
 
       {solved ? (
         <p className="game-won" role="status">
-          Ratkaisu oikein — aika {formatElapsed(elapsedMs)}.
+          Solved — time {formatElapsed(elapsedMs)}.
           {storedStats
-            ? ` Paras tällä kentällä: ${formatElapsed(storedStats.bestMs)}.`
+            ? ` Best on this board: ${formatElapsed(storedStats.bestMs)}.`
             : ''}
         </p>
       ) : null}

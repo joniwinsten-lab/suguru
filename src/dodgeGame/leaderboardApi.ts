@@ -39,7 +39,7 @@ export async function fetchDodgeLeaderboard(
   const pStart = String(startDate ?? '').slice(0, 10)
   const pEnd = String(endDate ?? '').slice(0, 10)
   if (!/^\d{4}-\d{2}-\d{2}$/.test(pStart) || !/^\d{4}-\d{2}-\d{2}$/.test(pEnd)) {
-    throw new Error('Top-listan aikaväli puuttuu tai on virheellinen.')
+    throw new Error('Leaderboard date range is missing or invalid.')
   }
   const sb = getSupabase()
   const { data, error } = await sb.rpc('get_dodge_leaderboard', {
@@ -49,7 +49,7 @@ export async function fetchDodgeLeaderboard(
   if (error) throw new Error(errorToReadableString(error))
   const raw = data ?? []
   if (!Array.isArray(raw)) {
-    throw new Error('Top-listan vastaus ei ole taulukko. Tarkista get_dodge_leaderboard-RPC.')
+    throw new Error('Leaderboard response is not an array. Check the get_dodge_leaderboard RPC.')
   }
   const rows = raw as Record<string, unknown>[]
   return rows.map((r) => ({
@@ -148,7 +148,7 @@ export async function beginDodgeAttempt(dayKey: string, playerName: string): Pro
   return parseBeginJson(data)
 }
 
-/** @deprecated Käytä fetchDodgeDailyQuota; sama kuin quota.submitted */
+/** @deprecated Use fetchDodgeDailyQuota; same as quota.submitted */
 export async function dodgeAlreadyPlayed(dayKey: string, playerName: string): Promise<boolean> {
   const q = await fetchDodgeDailyQuota(dayKey, playerName)
   return q.submitted

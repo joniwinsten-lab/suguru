@@ -16,11 +16,11 @@ export function loadPool(tierId: string): Promise<PoolPack> {
       cache: 'no-store',
     })
       .then((r) => {
-        if (!r.ok) throw new Error(`Tasopakettia ei löydy: ${tierId} (${r.status})`)
+        if (!r.ok) throw new Error(`Level pack not found: ${tierId} (${r.status})`)
         return r.json() as Promise<PoolPack>
       })
       .then((pack) => {
-        if (!pack.levels?.length) throw new Error(`Tyhjä tasopaketti: ${tierId}`)
+        if (!pack.levels?.length) throw new Error(`Empty level pack: ${tierId}`)
         return pack
       })
     cache.set(tierId, p)

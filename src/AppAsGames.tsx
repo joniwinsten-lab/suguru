@@ -3,12 +3,12 @@ import { DodgePage } from './pages/DodgePage'
 import { SanuliPage } from './pages/SanuliPage'
 import './App.css'
 
-/** Älä käytä `import.meta.env.BASE_URL` HashRouter-basenameena: hash-polku on `#/…`, ei `/as/…`. */
+/** Do not use `import.meta.env.BASE_URL` as HashRouter basename: routes live in `#/…`, not `/as/…`. */
 function GamesHub() {
   return (
-    <main className="as-games-hub" aria-label="Pelivalinta">
-      <h1 className="as-games-hub__title">Pelit</h1>
-      <p className="as-games-hub__lead">Valitse peli:</p>
+    <main className="as-games-hub" aria-label="Game picker">
+      <h1 className="as-games-hub__title">Games</h1>
+      <p className="as-games-hub__lead">Choose a game:</p>
       <ul className="as-games-hub__list">
         <li>
           <NavLink className="as-games-hub__card" to="/sanuli">
@@ -25,13 +25,13 @@ function GamesHub() {
   )
 }
 
-/** Vain Sanuli + AS Daily life (julkaisu esim. https://joniwinsten-lab.github.io/as/). */
+/** Sanuli + AS Daily life only (e.g. https://joniwinsten-lab.github.io/as/). */
 export default function AppAsGames() {
   return (
     <HashRouter>
-      <nav className="site-nav" aria-label="Pelit">
+      <nav className="site-nav" aria-label="Games">
         <NavLink className="site-nav__link" end to="/">
-          Etusivu
+          Home
         </NavLink>
         <NavLink className="site-nav__link" to="/sanuli">
           Sanuli

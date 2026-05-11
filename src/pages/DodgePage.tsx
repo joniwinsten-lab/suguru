@@ -63,13 +63,13 @@ function clearDodgePendingScore() {
 function dodgeBeginErrorMessage(code: string | undefined): string {
   switch (code) {
     case 'already_submitted':
-      return 'Olet jo lähettänyt tuloksen tälle päivälle. Uusi peli on mahdollista huomenna.'
+      return 'You already submitted a score for today. You can play again tomorrow.'
     case 'no_attempts':
-      return 'Kaikki kolme yritystä on jo käytetty. Lähetä tulos tai yritä uudelleen huomenna.'
+      return 'All three runs are used. Submit your score or try again tomorrow.'
     case 'invalid_name':
-      return 'Tarkista nimi (1–32 merkkiä).'
+      return 'Check the name (1–32 characters).'
     default:
-      return 'Pelin aloitus epäonnistui. Yritä uudelleen.'
+      return 'Could not start the game. Please try again.'
   }
 }
 
@@ -889,11 +889,11 @@ export function DodgePage() {
     setSubmitError(null)
     if (isSupabaseConfigured()) {
       if (scoreSubmittedToday) {
-        setNameError('Olet jo lähettänyt tuloksen tälle päivälle. Uusi peli on mahdollista huomenna.')
+        setNameError('You already submitted a score for today. You can play again tomorrow.')
         return
       }
       if (attemptsUsed >= attemptsMax) {
-        setNameError('Kaikki yritykset on käytetty. Lähetä tulos tai yritä uudelleen huomenna.')
+        setNameError('All runs are used. Submit your score or try again tomorrow.')
         return
       }
       setBeginAttemptLoading(true)
@@ -1176,7 +1176,7 @@ export function DodgePage() {
       const msg = caughtToUiMessage(e)
       const code = typeof e === 'object' && e !== null && 'code' in e ? String((e as { code: unknown }).code) : ''
       if (code === '23505' || /duplicate|unique/i.test(msg)) {
-        setSubmitError('Tällä nimellä on jo tulos tälle päivälle.')
+        setSubmitError('This name already has a score for today.')
       } else {
         setSubmitError(msg)
       }
@@ -1190,7 +1190,7 @@ export function DodgePage() {
     const trimmed = name.trim()
     const p = readDodgePendingScore(dayKey, trimmed)
     if (!p) {
-      setSubmitError('Ei tallennettua tulosta lähetettäväksi. Pelaa uusi kierros tai päivitä sivu.')
+      setSubmitError('No saved score to submit. Play another run or refresh the page.')
       return
     }
     setSubmitting(true)
@@ -1211,7 +1211,7 @@ export function DodgePage() {
       const msg = caughtToUiMessage(e)
       const code = typeof e === 'object' && e !== null && 'code' in e ? String((e as { code: unknown }).code) : ''
       if (code === '23505' || /duplicate|unique/i.test(msg)) {
-        setSubmitError('Tällä nimellä on jo tulos tälle päivälle.')
+        setSubmitError('This name already has a score for today.')
       } else {
         setSubmitError(msg)
       }
@@ -1243,17 +1243,17 @@ export function DodgePage() {
       <header className="app-header">
         <h1>AS Daily life</h1>
         <p className="dodge__lead">
-          AS Daily life — liikuta hiirtä pelialueella. Esteet putoavat ylhäältä; väistä niin pitkään kuin pystyt.
-          Matka kasvaa metreinä ja tempo kiristyy. Enintään kolme pelikertaa päivässä per nimi (UTC {dayKey});
-          tuloksen voi lähettää listoille kerran päivässä, ja lähetyksen jälkeen uusi peli on mahdollista
-          vasta seuraavana päivänä. Tulos tallennetaan Supabaseen.
+          AS Daily life — move the mouse in the play area. Obstacles fall from above; dodge as long as you can.
+          Distance increases in metres and the pace speeds up. Up to three runs per name per UTC day ({dayKey});
+          you may submit one score to the leaderboard per day, and after submitting you cannot start another run
+          until the next day. Scores are stored in Supabase.
         </p>
       </header>
 
       {phase === 'lobby' ? (
-        <section className="dodge__panel" aria-label="Aloitus">
+        <section className="dodge__panel" aria-label="Start">
           <label className="dodge__label" htmlFor="dodge-player-name">
-            Nimi (top-listoissa)
+            Name (on leaderboards)
           </label>
           <input
             id="dodge-player-name"
@@ -1266,7 +1266,7 @@ export function DodgePage() {
               setNameError(null)
               setSubmitOk(false)
             }}
-            placeholder="esim. Maija"
+            placeholder="e.g. Alex"
           />
               {nameError ? (
             <p className="dodge__error" role="alert">
@@ -1275,21 +1275,21 @@ export function DodgePage() {
           ) : null}
           {supabaseOn && quotaLoaded && name.trim() && scoreSubmittedToday ? (
             <p className="dodge__hint" role="status">
-              Olet jo lähettänyt tuloksen tälle päivälle tällä nimellä. Uusi peli on mahdollista huomenna.
+              You already submitted a score for today with this name. You can play again tomorrow.
             </p>
           ) : null}
           {supabaseOn && quotaLoaded && name.trim() && !scoreSubmittedToday ? (
             <p className="dodge__hint" role="status">
-              Yritykset tänään: {attemptsUsed} / {attemptsMax}. Tuloksen voi lähettää vain kerran; kun olet
-              lähettänyt, et voi enää aloittaa uutta peliä tälle päivälle.
+              Runs today: {attemptsUsed} / {attemptsMax}. You may submit only one score; after you submit, you
+              cannot start another run until the next day.
             </p>
           ) : null}
           {supabaseOn && noAttemptsLeft && lobbyPending && !scoreSubmittedToday ? (
             <div className="dodge__lobby-pending" style={{ marginTop: '0.65rem' }}>
               <p className="dodge__hint" role="status">
-                Viimeisin tallennettu tulos: <strong>{lobbyPending.distanceM.toFixed(1)} m</strong> · aika{' '}
-                {formatRunMs(lobbyPending.runMs)}. Kolme yritystä on käytetty — lähetä tämä tulos tai yritä
-                uudelleen huomenna.
+                Last saved result: <strong>{lobbyPending.distanceM.toFixed(1)} m</strong> · time{' '}
+                {formatRunMs(lobbyPending.runMs)}. All three runs are used — submit this score or try again
+                tomorrow.
               </p>
               <button
                 type="button"
@@ -1298,7 +1298,7 @@ export function DodgePage() {
                 disabled={submitting}
                 onClick={() => void onSubmitLobbyPending()}
               >
-                {submitting ? 'Lähetetään…' : 'Lähetä tallennettu tulos'}
+                {submitting ? 'Submitting…' : 'Submit saved score'}
               </button>
               {submitError ? (
                 <p className="dodge__error" role="alert">
@@ -1309,7 +1309,7 @@ export function DodgePage() {
           ) : null}
           {phase === 'lobby' && submitOk ? (
             <p className="dodge__hint" role="status" style={{ marginTop: '0.5rem' }}>
-              Tulos tallennettu. Kiitos pelistä!
+              Score saved. Thanks for playing!
             </p>
           ) : null}
           <button
@@ -1319,27 +1319,27 @@ export function DodgePage() {
             onClick={() => void start()}
           >
             {playedCheckLoading
-              ? 'Tarkistetaan…'
+              ? 'Checking…'
               : beginAttemptLoading
-                ? 'Varataan pelikertaa…'
-                : 'Aloita peli'}
+                ? 'Reserving run…'
+                : 'Start game'}
           </button>
         </section>
       ) : null}
 
       {phase === 'playing' || phase === 'over' ? (
-        <section ref={gamePanelRef} className="dodge__panel" aria-label="Pelialue">
+        <section ref={gamePanelRef} className="dodge__panel" aria-label="Play area">
           {phase === 'playing' ? (
             <div className="dodge__hud" aria-live="polite">
               <span className="dodge__hud-main">
-                <span>Matka</span>
+                <span>Distance</span>
                 <span>{displayM.toFixed(1)} m</span>
               </span>
               {reserveLifeHud ? (
                 <span
                   key={lifeBadgeEpoch}
                   className="dodge__lives"
-                  title="Seuraava osuma kuluttaa tämän elämän. Sait lisäelämän!"
+                  title="The next hit uses this life. Extra life gained!"
                   role="status"
                 >
                   <span className="dodge__lives__burst" aria-hidden="true" />
@@ -1348,14 +1348,14 @@ export function DodgePage() {
                   </span>
                   <span className="dodge__lives__main">
                     <span className="dodge__lives__num">1</span>
-                    <span className="dodge__lives__word">elämä</span>
+                    <span className="dodge__lives__word">life</span>
                   </span>
                 </span>
               ) : null}
             </div>
           ) : (
             <p className="dodge__hint">
-              Tulos: <strong>{finalM.toFixed(1)} m</strong> · Aika {formatRunMs(finalRunMs)}
+              Score: <strong>{finalM.toFixed(1)} m</strong> · Time {formatRunMs(finalRunMs)}
             </p>
           )}
 
@@ -1363,7 +1363,7 @@ export function DodgePage() {
             <canvas
               ref={canvasRef}
               role="img"
-              aria-label="AS Daily life -peli: liikuta hiirtä väistääksesi putoavia esteitä"
+              aria-label="AS Daily life: move the mouse to dodge falling obstacles"
               onPointerMove={onPointerMove}
               onPointerDown={(e) => {
                 if (phaseRef.current === 'playing') {
@@ -1375,20 +1375,20 @@ export function DodgePage() {
 
           {phase === 'playing' ? (
             <p className="dodge__hint dodge__hint--hide-when-playing-mobile" style={{ marginBottom: 0 }}>
-              Vinkki: aloita alhaalta — tilaa väistää lisääntyy ylöspäin.
+              Tip: start low — you get more room to dodge as you move up.
             </p>
           ) : null}
 
           {phase === 'over' ? (
             <div className="dodge__over">
               <p className="dodge__hint" style={{ marginBottom: '0.35rem' }}>
-                Matka
+                Distance
               </p>
               <p>
                 <strong>{finalM.toFixed(1)} m</strong>
               </p>
               {bestM > 0 ? (
-                <p className="dodge__best">Paras tällä laitteella: {bestM.toFixed(1)} m</p>
+                <p className="dodge__best">Best on this device: {bestM.toFixed(1)} m</p>
               ) : null}
 
               {!supabaseOn ? (
@@ -1398,15 +1398,15 @@ export function DodgePage() {
                   style={{ marginTop: '0.75rem' }}
                   onClick={backToLobby}
                 >
-                  Pelaa uudelleen
+                  Play again
                 </button>
               ) : null}
 
               {supabaseOn && !submitOk ? (
                 <>
                   <p className="dodge__hint" style={{ marginTop: '0.65rem' }}>
-                    Lähetä tämä tulos listoihin (enintään kerran / päivä / nimi). Voit myös yrittää uudelleen,
-                    jos sinulla on yrityksiä jäljellä tänään.
+                    Submit this score to the leaderboards (once per day per name). You can also try again if you
+                    have runs left today.
                   </p>
                   <button
                     type="button"
@@ -1415,7 +1415,7 @@ export function DodgePage() {
                     disabled={submitting || beginAttemptLoading}
                     onClick={() => void onSubmit()}
                   >
-                    {submitting ? 'Lähetetään…' : 'Lähetä tulos'}
+                    {submitting ? 'Submitting…' : 'Submit score'}
                   </button>
                   {!scoreSubmittedToday && attemptsUsed < attemptsMax ? (
                     <button
@@ -1425,7 +1425,7 @@ export function DodgePage() {
                       disabled={submitting || beginAttemptLoading}
                       onClick={() => void start()}
                     >
-                      {beginAttemptLoading ? 'Varataan…' : 'Pelaa uudelleen'}
+                      {beginAttemptLoading ? 'Reserving…' : 'Play again'}
                     </button>
                   ) : null}
                   {submitError ? (
@@ -1439,7 +1439,7 @@ export function DodgePage() {
               {supabaseOn && submitOk ? (
                 <>
                   <p className="dodge__hint" role="status" style={{ marginTop: '0.65rem' }}>
-                    Tulos tallennettu. Kiitos pelistä!
+                    Score saved. Thanks for playing!
                   </p>
                   <button
                     type="button"
@@ -1447,7 +1447,7 @@ export function DodgePage() {
                     style={{ marginTop: '0.5rem' }}
                     onClick={backToLobby}
                   >
-                    Takaisin alkuun
+                    Back to start
                   </button>
                 </>
               ) : null}
@@ -1457,14 +1457,14 @@ export function DodgePage() {
       ) : null}
 
       <section className="dodge__panel" aria-label="Top-listat">
-        <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.05rem' }}>Top-listat</h2>
-        <div className="dodge__tabs" role="tablist" aria-label="Aikajänne">
+        <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.05rem' }}>Leaderboards</h2>
+        <div className="dodge__tabs" role="tablist" aria-label="Time range">
           {(
             [
-              ['day', 'Päivä'],
-              ['week', 'Viikko'],
-              ['month', 'Kuukausi'],
-              ['all', 'Kaikki'],
+              ['day', 'Day'],
+              ['week', 'Week'],
+              ['month', 'Month'],
+              ['all', 'All time'],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -1480,9 +1480,9 @@ export function DodgePage() {
           ))}
         </div>
         {!supabaseOn ? (
-          <p className="dodge__hint">Top-listat näkyvät, kun Supabase on konfiguroitu.</p>
+          <p className="dodge__hint">Leaderboards appear when Supabase is configured.</p>
         ) : boardLoading ? (
-          <p className="dodge__hint">Ladataan…</p>
+          <p className="dodge__hint">Loading…</p>
         ) : boardError ? (
           <p className="dodge__error" role="alert">
             {safeUiString(boardError)}
@@ -1493,15 +1493,15 @@ export function DodgePage() {
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Nimi</th>
-                  <th>Matka</th>
-                  <th>Aika</th>
+                  <th>Name</th>
+                  <th>Distance</th>
+                  <th>Time</th>
                 </tr>
               </thead>
               <tbody>
                 {boardRows.length === 0 ? (
                   <tr>
-                    <td colSpan={4}>Ei vielä tuloksia tälle jaksolle.</td>
+                    <td colSpan={4}>No scores for this period yet.</td>
                   </tr>
                 ) : (
                   boardRows.map((row, i) => (

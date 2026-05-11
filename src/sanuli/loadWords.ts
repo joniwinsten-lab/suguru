@@ -10,14 +10,14 @@ export function loadFiWords(): Promise<FiWordPack> {
     cache = fetch(`${import.meta.env.BASE_URL}words/fi-5.json`)
       .then((r) => {
         if (!r.ok)
-          throw new Error(`Sanalistaa ei löydy (${r.status})`)
+          throw new Error(`Word list not found (${r.status})`)
         return r.json() as Promise<{ solutions?: string[]; allowed?: string[] }>
       })
       .then((raw) => {
         const solutions = raw.solutions
         const allowed = raw.allowed
         if (!solutions?.length || !allowed?.length)
-          throw new Error('Sanalista on tyhjä tai viallinen')
+          throw new Error('Word list is empty or invalid')
         return { solutions, allowed }
       })
   }

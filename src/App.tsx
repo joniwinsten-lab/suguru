@@ -8,7 +8,7 @@ import './App.css'
 export default function App() {
   return (
     <HashRouter>
-      <nav className="site-nav" aria-label="Päävalikko">
+      <nav className="site-nav" aria-label="Main menu">
         <NavLink className="site-nav__link" end to="/">
           Suguru
         </NavLink>

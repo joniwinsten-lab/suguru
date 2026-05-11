@@ -40,7 +40,7 @@ function asText(v: unknown, depth: number): string {
       const code = asText(o.code, depth + 1)
       const det = asText(o.details, depth + 1)
       if (det.length > 0 && !isGarbageMessage(det)) return `${code}: ${det}`
-      if (code.length > 0 && !isGarbageMessage(code)) return `Virhe (${code})`
+      if (code.length > 0 && !isGarbageMessage(code)) return `Error (${code})`
     }
     try {
       return JSON.stringify(v)
@@ -94,26 +94,26 @@ function errorFromErrorInstance(err: Error, depth: number): string {
     /* ignore */
   }
 
-  return err.name || 'Virhe'
+  return err.name || 'Error'
 }
 
 export function errorToReadableString(e: unknown): string {
-  if (e == null) return 'Tuntematon virhe'
+  if (e == null) return 'Unknown error'
 
   if (typeof e === 'string') {
     const t = e.trim()
-    if (t.length === 0) return 'Tuntematon virhe'
-    if (isGarbageMessage(t)) return 'Tuntematon virhe (palvelimen vastaus oli epäselvä).'
+    if (t.length === 0) return 'Unknown error'
+    if (isGarbageMessage(t)) return 'Unknown error (server response was unclear).'
     return e
   }
 
   if (e instanceof Error) {
     const out = errorFromErrorInstance(e, 0).trim()
-    return out.length > 0 ? out : 'Tuntematon virhe'
+    return out.length > 0 ? out : 'Unknown error'
   }
 
   const out = asText(e, 0).trim()
-  if (out.length === 0 || isGarbageMessage(out)) return 'Tuntematon virhe'
+  if (out.length === 0 || isGarbageMessage(out)) return 'Unknown error'
   return out
 }
 
@@ -123,11 +123,11 @@ export function safeUiString(value: unknown): string {
   if (typeof value === 'string') {
     const t = value.trim()
     if (t.length === 0) return ''
-    if (isGarbageMessage(t)) return 'Tuntematon virhe (palvelimen vastaus oli epäselvä).'
+    if (isGarbageMessage(t)) return 'Unknown error (server response was unclear).'
     return value
   }
   if (typeof value === 'number' && Number.isFinite(value)) return String(value)
-  if (typeof value === 'boolean') return value ? 'kyllä' : 'ei'
+  if (typeof value === 'boolean') return value ? 'yes' : 'no'
   return errorToReadableString(value)
 }
 
@@ -138,10 +138,10 @@ export function caughtToUiMessage(e: unknown): string {
     if (typeof e === 'object' && e !== null && 'status' in e) {
       const st = (e as { status?: unknown }).status
       if (typeof st === 'number' || typeof st === 'string') {
-        return `Verkko- tai palvelinvirhe (HTTP ${st}). Tarkista verkko ja Supabase-asetukset.`
+        return `Network or server error (HTTP ${st}). Check your connection and Supabase settings.`
       }
     }
-    return 'Tuntematon virhe. Tarkista verkko, VITE_SUPABASE_URL / ANON_KEY ja RPC get_dodge_leaderboard.'
+    return 'Unknown error. Check your network, VITE_SUPABASE_URL / ANON_KEY, and the get_dodge_leaderboard RPC.'
   }
   return raw
 }
