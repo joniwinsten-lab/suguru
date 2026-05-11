@@ -16,7 +16,7 @@ const W = 360
 const H = 600
 const PLAYER_R = 11
 
-type Obstacle = { x: number; y: number; w: number; h: number; vy: number }
+type Obstacle = { x: number; y: number; w: number; h: number; vy: number; label: string }
 
 type Phase = 'lobby' | 'playing' | 'over'
 
@@ -25,6 +25,69 @@ type LeaderTab = 'day' | 'week' | 'month' | 'all'
 const ARENA_BG = '#FBEAE3'
 const OBSTACLE_FILL = '#5A1537'
 const OBSTACLE_STROKE = '#3d0f26'
+
+const OBSTACLE_LABELS = [
+  'Customer',
+  'Internal meet',
+  'Workshop',
+  'Retro',
+  'Daily',
+  'Monthly',
+  'Competitor',
+  'Bug',
+  'Discounts',
+  'Deadline',
+  'Budget',
+  'Free work',
+  'Non-billable',
+  'R&D',
+  'Ticket',
+  'Fire!',
+  'Handoff',
+  'Senior review',
+] as const
+
+function pickObstacleLabel(rng: () => number): string {
+  const i = Math.floor(rng() * OBSTACLE_LABELS.length)
+  return OBSTACLE_LABELS[Math.min(i, OBSTACLE_LABELS.length - 1)]!
+}
+
+function drawObstacleLabel(ctx: CanvasRenderingContext2D, o: Obstacle, textColor: string) {
+  const padX = 4
+  const padY = 2
+  const maxW = o.w - padX * 2
+  const maxH = o.h - padY * 2
+  if (maxW < 6 || maxH < 8) return
+
+  ctx.save()
+  ctx.fillStyle = textColor
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  let fontPx = Math.min(12, maxH * 0.44)
+  const minPx = 6.5
+
+  const setFont = (px: number) => {
+    ctx.font = `600 ${px}px system-ui, -apple-system, Segoe UI, sans-serif`
+  }
+
+  setFont(fontPx)
+  while (fontPx > minPx && ctx.measureText(o.label).width > maxW) {
+    fontPx -= 0.5
+    setFont(fontPx)
+  }
+
+  let line = o.label
+  if (ctx.measureText(line).width > maxW) {
+    let t = o.label
+    while (t.length > 0 && ctx.measureText(`${t}…`).width > maxW) {
+      t = t.slice(0, -1)
+    }
+    line = t.length > 0 ? `${t}…` : '…'
+  }
+
+  ctx.fillText(line, o.x + o.w / 2, o.y + o.h / 2)
+  ctx.restore()
+}
 
 const BEST_KEY = 'suguru_dodge_best_m'
 
@@ -247,6 +310,7 @@ export function DodgePage() {
         OBSTACLE_FILL,
         OBSTACLE_STROKE,
       )
+      drawObstacleLabel(ctx, o, ARENA_BG)
     }
 
     const px = pxRef.current
@@ -365,7 +429,8 @@ export function DodgePage() {
         const h = 16 + rnd() * 22
         const x = clamp(8 + rnd() * (W - w - 16), 4, W - w - 4)
         const vy = fall * (0.82 + rnd() * 0.38)
-        const next: Obstacle = { x, y: -h - 6, w, h, vy }
+        const label = pickObstacleLabel(rnd)
+        const next: Obstacle = { x, y: -h - 6, w, h, vy, label }
         obstaclesRef.current = [...obstaclesRef.current, next]
         spawnCooldownRef.current = spawnIntervalMeters(distanceRef.current)
       }
