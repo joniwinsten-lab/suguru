@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   buildDailyRounds,
-  scoreColorAnswer,
   scoreOrderAnswer,
+  scorePickMaxAnswer,
   scoreTapAnswer,
   type RoundSpec,
 } from '../teamGame/engine'
@@ -163,10 +163,10 @@ export function TeamDailyPage() {
     setFeedback(points > 0 ? 'ok' : 'bad')
   }
 
-  const onColorPick = (idx: number) => {
+  const onPickMax = (n: number) => {
     if (phase !== 'playing' || feedback !== null) return
-    const r = spec as Extract<RoundSpec, { kind: 'color' }>
-    applyRoundPoints(scoreColorAnswer(r, idx))
+    const r = spec as Extract<RoundSpec, { kind: 'pickMax' }>
+    applyRoundPoints(scorePickMaxAnswer(r, n))
   }
 
   const onOrderClick = (n: number) => {
@@ -269,20 +269,20 @@ export function TeamDailyPage() {
           </div>
           <p className="team-daily__hint">Pisteet: {totalScore}</p>
 
-          {spec.kind === 'color' ? (
+          {spec.kind === 'pickMax' ? (
             <>
-              <p className="team-daily__hint">Valitse oikea väri (yksi oikea).</p>
-              <div className="team-daily__colors">
-                {spec.colors.map((c, i) => (
+              <p className="team-daily__hint">Napauta suurin luku (yksi napautus).</p>
+              <div className="team-daily__order-btns">
+                {spec.shuffled.map((n) => (
                   <button
-                    key={`${c}-${i}`}
+                    key={n}
                     type="button"
-                    className="team-daily__color-btn"
-                    style={{ background: c }}
-                    aria-label={`Väri ${i + 1}`}
+                    className="team-daily__order-btn"
                     disabled={feedback !== null}
-                    onClick={() => onColorPick(i)}
-                  />
+                    onClick={() => onPickMax(n)}
+                  >
+                    {n}
+                  </button>
                 ))}
               </div>
             </>

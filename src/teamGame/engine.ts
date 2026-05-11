@@ -6,15 +6,13 @@
 export const ROUND_POINTS = 10
 export const DEFAULT_ROUND_COUNT = 18
 
-/** Korkea kontrasti, “pika peli” -fiilis; vältetään vihreää jotta se ei sekoitu “oikein”-palautteeseen. */
-const PALETTE = ['#ff2d6a', '#00d4ff', '#ffd400', '#b388ff', '#ff6b35'] as const
+export type RoundKind = 'pickMax' | 'order' | 'tap'
 
-export type RoundKind = 'color' | 'order' | 'tap'
-
-export type ColorRound = {
-  kind: 'color'
-  colors: readonly string[]
-  correctIndex: number
+/** Kolme eri lukua; pelaaja napauttaa suurimman. */
+export type PickMaxRound = {
+  kind: 'pickMax'
+  values: readonly [number, number, number]
+  shuffled: readonly [number, number, number]
 }
 
 export type OrderRound = {
@@ -33,7 +31,7 @@ export type TapRound = {
   correctIndex: number
 }
 
-export type RoundSpec = ColorRound | OrderRound | TapRound
+export type RoundSpec = PickMaxRound | OrderRound | TapRound
 
 function mulberry32(seed: number) {
   return function () {
@@ -77,16 +75,12 @@ export function buildDailyRounds(
     const rng = mulberry32(hashDayRound(dayKey, i))
     const kindRoll = rng()
     const kind: RoundKind =
-      kindRoll < 0.34 ? 'color' : kindRoll < 0.67 ? 'order' : 'tap'
+      kindRoll < 0.34 ? 'pickMax' : kindRoll < 0.67 ? 'order' : 'tap'
 
-    if (kind === 'color') {
-      const colors = shuffle([...PALETTE], rng).slice(0, 3)
-      const correctIndex = Math.floor(rng() * 3)
-      out.push({
-        kind: 'color',
-        colors,
-        correctIndex,
-      })
+    if (kind === 'pickMax') {
+      const values = pickThreeDistinctNumbers(rng)
+      const shuffled = shuffle([...values], rng) as [number, number, number]
+      out.push({ kind: 'pickMax', values, shuffled })
     } else if (kind === 'order') {
       const values = pickThreeDistinctNumbers(rng)
       const shuffled = shuffle([...values], rng) as [number, number, number]
@@ -111,8 +105,12 @@ export function expectedClickSequence(spec: OrderRound): number[] {
   return spec.clickOrder === 'desc' ? s.reverse() : s
 }
 
-export function scoreColorAnswer(spec: ColorRound, pickedIndex: number): number {
-  return pickedIndex === spec.correctIndex ? ROUND_POINTS : 0
+export function correctMaxValue(values: readonly [number, number, number]): number {
+  return Math.max(values[0], values[1], values[2])
+}
+
+export function scorePickMaxAnswer(spec: PickMaxRound, pickedNumber: number): number {
+  return pickedNumber === correctMaxValue(spec.values) ? ROUND_POINTS : 0
 }
 
 export function scoreOrderAnswer(

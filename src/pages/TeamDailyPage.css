@@ -85,21 +85,6 @@
   cursor: not-allowed;
 }
 
-.team-daily__colors {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.team-daily__color-btn {
-  width: 4.25rem;
-  height: 4.25rem;
-  border-radius: 10px;
-  border: 3px solid var(--border-strong);
-  cursor: pointer;
-}
-
 .team-daily__order-btns {
   display: flex;
   gap: 0.5rem;

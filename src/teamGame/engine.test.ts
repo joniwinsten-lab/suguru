@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildDailyRounds,
+  correctMaxValue,
   expectedClickSequence,
-  scoreColorAnswer,
   scoreOrderAnswer,
+  scorePickMaxAnswer,
   scoreTapAnswer,
   sortedValues,
 } from './engine'
@@ -25,10 +26,11 @@ describe('teamGame engine', () => {
     const rounds = buildDailyRounds('2026-05-01', 24)
     expect(rounds).toHaveLength(24)
     for (const r of rounds) {
-      if (r.kind === 'color') {
-        expect(r.colors).toHaveLength(3)
-        expect(r.correctIndex).toBeGreaterThanOrEqual(0)
-        expect(r.correctIndex).toBeLessThanOrEqual(2)
+      if (r.kind === 'pickMax') {
+        expect(new Set(r.values).size).toBe(3)
+        expect(new Set(r.shuffled).size).toBe(3)
+        expect(new Set(r.shuffled)).toEqual(new Set(r.values))
+        expect(correctMaxValue(r.values)).toBe(Math.max(...r.values))
       } else if (r.kind === 'order') {
         expect(new Set(r.values).size).toBe(3)
         expect(new Set(r.shuffled).size).toBe(3)
@@ -45,19 +47,14 @@ describe('teamGame engine', () => {
     }
   })
 
-  it('scores color / order / tap', () => {
-    expect(
-      scoreColorAnswer(
-        { kind: 'color', colors: ['#a', '#b', '#c'], correctIndex: 1 },
-        1,
-      ),
-    ).toBe(10)
-    expect(
-      scoreColorAnswer(
-        { kind: 'color', colors: ['#a', '#b', '#c'], correctIndex: 1 },
-        0,
-      ),
-    ).toBe(0)
+  it('scores pickMax / order / tap', () => {
+    const pickMax = {
+      kind: 'pickMax' as const,
+      values: [2, 7, 4] as const,
+      shuffled: [4, 7, 2] as const,
+    }
+    expect(scorePickMaxAnswer(pickMax, 7)).toBe(10)
+    expect(scorePickMaxAnswer(pickMax, 4)).toBe(0)
 
     const orderAsc = {
       kind: 'order' as const,
