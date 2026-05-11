@@ -1,8 +1,8 @@
 name: Deploy AS games hub (github.io/as)
 
 # Julkaisee `dist-as`-buildin repoon joniwinsten-lab/as (GitHub Pages).
-# Vaatii: repo `as`, Pages lähteenä main / (root). Salaisuuksina AS_SITE_DEPLOY_TOKEN,
-# repomuuttuja DEPLOY_AS_SITE=true (suguru-repo → Settings → Variables).
+# Vaatii: repo `as`, Pages lähteenä main / (root). Salainen AS_SITE_DEPLOY_TOKEN (PAT → as-repo).
+# Deploy ajetaan vain tästä upstream-reposta (forkit ohittavat).
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
 
   deploy-as-hub:
     needs: build-as-hub
-    if: vars.DEPLOY_AS_SITE == 'true'
+    if: github.repository == 'joniwinsten-lab/suguru'
     runs-on: ubuntu-latest
     permissions:
       contents: read
