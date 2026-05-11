@@ -16,7 +16,16 @@ const W = 360
 const H = 600
 const PLAYER_R = 11
 
-type Obstacle = { x: number; y: number; w: number; h: number; vy: number; label: string }
+type Obstacle = {
+  x: number
+  y: number
+  w: number
+  h: number
+  vy: number
+  label: string
+  /** Harvinainen nopea leveä "Golive bug fix" -palkki */
+  golive?: boolean
+}
 
 type Phase = 'lobby' | 'playing' | 'over'
 
@@ -25,6 +34,9 @@ type LeaderTab = 'day' | 'week' | 'month' | 'all'
 const ARENA_BG = '#FBEAE3'
 const OBSTACLE_FILL = '#5A1537'
 const OBSTACLE_STROKE = '#3d0f26'
+const GOLIVE_LABEL = 'Golive bug fix'
+/** Todennäköisyys että yksi spawn on Golive-palkki (~1.5 %). */
+const GOLIVE_SPAWN_P = 0.015
 
 const OBSTACLE_LABELS = [
   'Customer',
@@ -303,8 +315,8 @@ export function DodgePage() {
       } else {
         ctx.rect(o.x, o.y, o.w, o.h)
       }
-      ctx.strokeStyle = OBSTACLE_STROKE
-      ctx.lineWidth = 2
+      ctx.strokeStyle = o.golive ? '#8b294d' : OBSTACLE_STROKE
+      ctx.lineWidth = o.golive ? 2.5 : 2
       ctx.stroke()
     }
 
@@ -420,12 +432,31 @@ export function DodgePage() {
       spawnCooldownRef.current -= dt
       if (spawnCooldownRef.current <= 0) {
         const rnd = Math.random
-        const w = 30 + rnd() * (42 + Math.min(distanceRef.current * 0.1, 38))
-        const h = 16 + rnd() * 22
-        const x = clamp(8 + rnd() * (W - w - 16), 4, W - w - 4)
-        const vy = fall * (0.82 + rnd() * 0.38)
-        const label = pickObstacleLabel(rnd)
-        const next: Obstacle = { x, y: -h - 6, w, h, vy, label }
+        let next: Obstacle
+
+        if (rnd() < GOLIVE_SPAWN_P) {
+          const gh = 12 + rnd() * 11
+          const gw = Math.min(W - 8, W * (0.58 + rnd() * 0.32))
+          const gx = clamp(4 + rnd() * Math.max(1, W - gw - 8), 4, W - gw - 4)
+          const gvy = fall * (2.05 + rnd() * 0.55)
+          next = {
+            x: gx,
+            y: -gh - 2,
+            w: gw,
+            h: gh,
+            vy: gvy,
+            label: GOLIVE_LABEL,
+            golive: true,
+          }
+        } else {
+          const w = 30 + rnd() * (42 + Math.min(distanceRef.current * 0.1, 38))
+          const h = 16 + rnd() * 22
+          const x = clamp(8 + rnd() * (W - w - 16), 4, W - w - 4)
+          const vy = fall * (0.82 + rnd() * 0.38)
+          const label = pickObstacleLabel(rnd)
+          next = { x, y: -h - 6, w, h, vy, label }
+        }
+
         obstaclesRef.current = [...obstaclesRef.current, next]
         spawnCooldownRef.current = spawnIntervalMeters(distanceRef.current)
       }
