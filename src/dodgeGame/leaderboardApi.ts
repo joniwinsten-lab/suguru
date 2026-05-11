@@ -35,10 +35,15 @@ export async function fetchDodgeLeaderboard(
   startDate: string,
   endDate: string,
 ): Promise<DodgeLeaderboardRow[]> {
+  const pStart = String(startDate ?? '').slice(0, 10)
+  const pEnd = String(endDate ?? '').slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(pStart) || !/^\d{4}-\d{2}-\d{2}$/.test(pEnd)) {
+    throw new Error('Top-listan aikaväli puuttuu tai on virheellinen.')
+  }
   const sb = getSupabase()
   const { data, error } = await sb.rpc('get_dodge_leaderboard', {
-    p_start: startDate,
-    p_end: endDate,
+    p_start: pStart,
+    p_end: pEnd,
   })
   if (error) throw new Error(errorToReadableString(error))
   const raw = data ?? []
@@ -77,9 +82,12 @@ export async function submitDodgeScore(payload: DodgeSubmitPayload): Promise<voi
 
 export async function dodgeAlreadyPlayed(dayKey: string, playerName: string): Promise<boolean> {
   const sb = getSupabase()
+  const pDay = String(dayKey ?? '').slice(0, 10)
+  const pName = String(playerName ?? '').trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(pDay) || pName.length === 0) return false
   const { data, error } = await sb.rpc('dodge_already_played', {
-    p_day: dayKey,
-    p_name: playerName.trim(),
+    p_day: pDay,
+    p_name: pName,
   })
   if (error) throw new Error(errorToReadableString(error))
   return Boolean(data)
