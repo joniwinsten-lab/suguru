@@ -45,7 +45,7 @@ Kentät generoidaan `npm run build:pools` → `public/pools/{taso}.json`. Oletuk
 
 Apuna asetteluille: `scripts/solve-layout.mjs` (stdin: JSON `height`, `width`, `regions`) ja `scripts/random-solvable.mjs` (esim. `node scripts/random-solvable.mjs 8 8`).
 
-## AS Daily life (`#/vaisto`)
+## AS Daily life (`#/as-daily-life`)
 
 Hiiren väistöpeli **AS Daily life**: matka metreinä, vaikeus kasvaa pelin aikana. **Yksi yritys per UTC-päivä per nimi**; tulokset ja top-listat (päivä / viikko / kuukausi / kaikki) **Supabaseen**.
 

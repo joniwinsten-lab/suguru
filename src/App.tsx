@@ -1,4 +1,4 @@
-import { HashRouter, NavLink, Route, Routes } from 'react-router-dom'
+import { HashRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import { DodgePage } from './pages/DodgePage'
 import { SanuliPage } from './pages/SanuliPage'
 import { SuguruPage } from './pages/SuguruPage'
@@ -15,14 +15,15 @@ export default function App() {
         <NavLink className="site-nav__link" to="/sanuli">
           Sanuli
         </NavLink>
-        <NavLink className="site-nav__link" to="/vaisto">
+        <NavLink className="site-nav__link" to="/as-daily-life">
           AS Daily life
         </NavLink>
       </nav>
       <Routes>
         <Route path="/" element={<SuguruPage />} />
         <Route path="/sanuli" element={<SanuliPage />} />
-        <Route path="/vaisto" element={<DodgePage />} />
+        <Route path="/as-daily-life" element={<DodgePage />} />
+        <Route path="/vaisto" element={<Navigate to="/as-daily-life" replace />} />
       </Routes>
     </HashRouter>
   )
