@@ -25,6 +25,8 @@ type DodgePendingPayload = {
   nameNorm: string
   distanceM: number
   runMs: number
+  /** Este johon peli päättyi (leaderboard-lähetys). */
+  endedOn?: string
 }
 
 function writeDodgePendingScore(p: DodgePendingPayload) {
@@ -46,7 +48,12 @@ function readDodgePendingScore(dayKey: string, trimmedName: string): DodgePendin
     const distanceM =
       typeof o.distanceM === 'number' && Number.isFinite(o.distanceM) ? o.distanceM : 0
     const runMs = typeof o.runMs === 'number' && Number.isFinite(o.runMs) ? Math.max(0, Math.round(o.runMs)) : 0
-    return { dayKey: o.dayKey, nameNorm: o.nameNorm, distanceM, runMs }
+    let endedOn: string | undefined
+    if (typeof o.endedOn === 'string') {
+      const t = o.endedOn.trim()
+      if (t.length > 0) endedOn = t.slice(0, 200)
+    }
+    return { dayKey: o.dayKey, nameNorm: o.nameNorm, distanceM, runMs, endedOn }
   } catch {
     return null
   }
@@ -516,6 +523,25 @@ function formatRunMs(ms: number): string {
   return `${(ms / 1000).toFixed(1)} s`
 }
 
+const ENDED_ON_STORAGE_MAX = 200
+
+const BRAND_LOGO_TITLE: Record<BrandLogoKey, string> = {
+  collapick: 'Collapick',
+  sprintit: 'Sprintit',
+  revise: 'Revise',
+}
+
+/** Nimi joka tallennetaan tulokseen / näytetään listalla (logo → brändi, muuten esteen teksti). */
+function obstacleEndedOnLabel(o: Obstacle): string {
+  if (o.kind === 'golive') {
+    const t = o.label.trim()
+    return t.length > 0 ? t : 'Golive'
+  }
+  if (o.logoKey) return BRAND_LOGO_TITLE[o.logoKey] ?? String(o.logoKey)
+  const t = o.label.trim()
+  return t.length > 0 ? t : '—'
+}
+
 export function DodgePage() {
   const dayKey = useMemo(() => utcDayKey(), [])
 
@@ -527,6 +553,7 @@ export function DodgePage() {
   const [displayM, setDisplayM] = useState(0)
   const [finalM, setFinalM] = useState(0)
   const [finalRunMs, setFinalRunMs] = useState(0)
+  const [finalEndedOn, setFinalEndedOn] = useState('')
   const [bestM, setBestM] = useState(readBest)
 
   const [name, setName] = useState('')
@@ -567,6 +594,8 @@ export function DodgePage() {
   const hasReserveLifeRef = useRef(false)
   /** Kun `distanceRef` ylittää tämän (m), yritetään spawnaa extra-elämäpalikka (jos ei varaa). */
   const nextExtraLifeAtMetersRef = useRef(380 + Math.random() * 160)
+  /** Viimeinen este johon törmättiin (game over). */
+  const deathLabelRef = useRef('')
 
   const loadBoard = useCallback(async () => {
     if (!isSupabaseConfigured()) {
@@ -860,6 +889,9 @@ export function DodgePage() {
     const runMs = Math.max(0, Date.now() - gameStartMsRef.current)
     setFinalRunMs(runMs)
     setFinalM(d)
+    const endedRaw = deathLabelRef.current.trim()
+    const endedClip = endedRaw.slice(0, ENDED_ON_STORAGE_MAX)
+    setFinalEndedOn(endedClip)
     setBestM((prev) => {
       if (d > prev) {
         writeBest(d)
@@ -877,6 +909,7 @@ export function DodgePage() {
       nameNorm: name.trim().toLowerCase(),
       distanceM: d,
       runMs,
+      ...(endedClip.length > 0 ? { endedOn: endedClip } : {}),
     })
     draw()
   }, [draw, dayKey, name])
@@ -914,6 +947,7 @@ export function DodgePage() {
 
     obstaclesRef.current = []
     lifeSparksRef.current = []
+    deathLabelRef.current = ''
     hasReserveLifeRef.current = false
     setReserveLifeHud(false)
     setLifeBadgeEpoch(0)
@@ -926,6 +960,7 @@ export function DodgePage() {
     pyRef.current = H - 72
     gameStartMsRef.current = Date.now()
     setDisplayM(0)
+    setFinalEndedOn('')
     setSubmitError(null)
     setSubmitOk(false)
     phaseRef.current = 'playing'
@@ -1105,6 +1140,7 @@ export function DodgePage() {
           setReserveLifeHud(false)
           obstaclesRef.current = obs.filter((x) => x !== o)
         } else {
+          deathLabelRef.current = obstacleEndedOnLabel(o)
           endGame()
           return
         }
@@ -1167,6 +1203,7 @@ export function DodgePage() {
         dayKey,
         distanceM: finalM,
         runMs: finalRunMs,
+        endedOn: finalEndedOn.trim() || null,
       })
       setSubmitOk(true)
       clearDodgePendingScore()
@@ -1201,6 +1238,7 @@ export function DodgePage() {
         dayKey,
         distanceM: p.distanceM,
         runMs: p.runMs,
+        endedOn: p.endedOn?.trim() || null,
       })
       setSubmitOk(true)
       clearDodgePendingScore()
@@ -1288,8 +1326,14 @@ export function DodgePage() {
             <div className="dodge__lobby-pending" style={{ marginTop: '0.65rem' }}>
               <p className="dodge__hint" role="status">
                 Last saved result: <strong>{lobbyPending.distanceM.toFixed(1)} m</strong> · time{' '}
-                {formatRunMs(lobbyPending.runMs)}. All three runs are used — submit this score or try again
-                tomorrow.
+                {formatRunMs(lobbyPending.runMs)}
+                {lobbyPending.endedOn ? (
+                  <>
+                    {' '}
+                    · hit <strong>{safeUiString(lobbyPending.endedOn)}</strong>
+                  </>
+                ) : null}
+                . All three runs are used — submit this score or try again tomorrow.
               </p>
               <button
                 type="button"
@@ -1496,12 +1540,13 @@ export function DodgePage() {
                   <th>Name</th>
                   <th>Distance</th>
                   <th>Time</th>
+                  <th className="dodge__th-obstacle">Obstacle</th>
                 </tr>
               </thead>
               <tbody>
                 {boardRows.length === 0 ? (
                   <tr>
-                    <td colSpan={4}>No scores for this period yet.</td>
+                    <td colSpan={5}>No scores for this period yet.</td>
                   </tr>
                 ) : (
                   boardRows.map((row, i) => (
@@ -1512,6 +1557,9 @@ export function DodgePage() {
                         {Number.isFinite(row.distance_m) ? `${Number(row.distance_m).toFixed(1)} m` : '—'}
                       </td>
                       <td>{Number.isFinite(row.run_ms) ? formatRunMs(row.run_ms) : '—'}</td>
+                      <td className="dodge__cell-obstacle">
+                        {row.ended_on.trim() ? safeUiString(row.ended_on) : '—'}
+                      </td>
                     </tr>
                   ))
                 )}

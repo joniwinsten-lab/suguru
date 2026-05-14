@@ -279,6 +279,13 @@
   font-weight: 600;
 }
 
+.dodge__th-obstacle,
+.dodge__cell-obstacle {
+  max-width: 9.5rem;
+  word-break: break-word;
+  hyphens: auto;
+}
+
 /* Mobiili: pelin aikana pelialue näkyviin ilman skrollausta (piilota ylimääräinen sisältö, rajaa canvas). */
 @media (max-width: 42rem) {
   .app.dodge--playing-mobile {

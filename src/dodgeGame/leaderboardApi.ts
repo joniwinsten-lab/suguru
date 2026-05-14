@@ -7,6 +7,8 @@ export type DodgeLeaderboardRow = {
   run_ms: number
   day_key: string
   created_at: string
+  /** Este / teksti johon peli päättyi lähetetyllä tuloksella (vanhoilla riveillä tyhjä). */
+  ended_on: string
 }
 
 function toNum(v: unknown): number {
@@ -58,6 +60,7 @@ export async function fetchDodgeLeaderboard(
     run_ms: Math.round(toNum(r.run_ms)),
     day_key: cellStr(r.day_key),
     created_at: cellStr(r.created_at),
+    ended_on: cellStr(r.ended_on),
   }))
 }
 
@@ -66,17 +69,24 @@ export type DodgeSubmitPayload = {
   dayKey: string
   distanceM: number
   runMs: number
+  /** Esteen näyttönimi törmäyshetkellä (valinnainen, max ~200 merkkiä). */
+  endedOn?: string | null
 }
+
+const ENDED_ON_MAX = 200
 
 export async function submitDodgeScore(payload: DodgeSubmitPayload): Promise<void> {
   const sb = getSupabase()
   const dm = Math.round(payload.distanceM * 100) / 100
+  const rawEnded = payload.endedOn != null ? String(payload.endedOn).trim() : ''
+  const endedOn = rawEnded.length > 0 ? rawEnded.slice(0, ENDED_ON_MAX) : null
   const { error } = await sb.from('dodge_game_scores').insert({
     player_name: payload.playerName.trim(),
     day_key: payload.dayKey,
     distance_m: dm,
     run_ms: Math.max(0, Math.round(payload.runMs)),
     game_version: 'v1',
+    ended_on: endedOn,
   })
   if (error) throw new Error(errorToReadableString(error))
 }
